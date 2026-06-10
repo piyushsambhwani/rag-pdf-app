@@ -1,5 +1,7 @@
 import io
 import re
+import os
+import math
 import random
 import requests
 from flask import Flask, request, jsonify
@@ -7,19 +9,30 @@ import PyPDF2
 
 app = Flask(__name__)
 
+# ✅ Keys come from Render environment variables — never hardcoded
 API_KEYS = [
-    "YOUR_KEY_1",
-    "YOUR_KEY_2",
-    "YOUR_KEY_3",
+    os.environ.get("GROQ_KEY_1", ""),
+    os.environ.get("GROQ_KEY_2", ""),
+    os.environ.get("GROQ_KEY_3", ""),
 ]
+# Remove empty keys in case some are not set
+API_KEYS = [k for k in API_KEYS if k]
 
+# Storage for all PDF chunks and chat history
 all_pdf_chunks = {}
 history = []
 
+# ========================
+# HELPER FUNCTIONS
+# ========================
+
 def clean(text):
+    # Removes extra spaces and weird whitespace
     return re.sub(r'\s+', ' ', text).strip()
 
 def split_into_chunks(text, chunk_size=300):
+    # Cuts long text into 300-word pieces
+    # Like cutting a long rope into equal smaller pieces
     words = text.split()
     chunks = []
     for i in range(0, len(words), chunk_size):
@@ -28,25 +41,83 @@ def split_into_chunks(text, chunk_size=300):
     return chunks
 
 def find_best_chunk(question, all_chunks_dict):
+    # TF-IDF Search — smarter than simple word matching
+    # Rare important words score higher than common words
+
     stopwords = {
         'the','a','an','is','it','in','on','at','to','for','of','and','or',
         'what','how','when','where','who','which','does','do','are','was',
         'were','will','can','could','should','would','have','has','had',
         'be','been','being','me','my','your','i','tell','about','please'
     }
+
+    # Get only the important words from the question
     question_words = set(question.lower().split()) - stopwords
+
+    # Collect ALL chunks from ALL PDFs into one flat list
+    # Needed so IDF knows total number of chunks
+    all_chunks_flat = []
+    for chunks in all_chunks_dict.values():
+        all_chunks_flat.extend(chunks)
+
+    total_chunks = len(all_chunks_flat)
+
+    if total_chunks == 0:
+        return "", ""
+
     best_chunk = ""
     best_score = 0
     best_pdf = ""
+
+    # Go through every chunk in every PDF
     for pdf_name, chunks in all_chunks_dict.items():
         for chunk in chunks:
-            chunk_words = set(chunk.lower().split())
-            score = len(question_words & chunk_words)
+
+            chunk_words = chunk.lower().split()
+            score = 0
+
+            for word in question_words:
+
+                # TF = how often this word appears in THIS chunk
+                # Example: "biryani" appears 3 times in 300 words = 0.01
+                tf = chunk_words.count(word) / len(chunk_words) if chunk_words else 0
+
+                # IDF = how RARE this word is across ALL chunks
+                # Rare words get higher score, common words get lower score
+                chunks_with_word = sum(
+                    1 for c in all_chunks_flat if word in c.lower().split()
+                )
+                idf = math.log(total_chunks / (chunks_with_word + 1)) + 1
+
+                # Final TF-IDF score for this word
+                score += tf * idf
+
             if score > best_score:
                 best_score = score
                 best_chunk = chunk
                 best_pdf = pdf_name
+
     return best_chunk, best_pdf
+
+def ask_groq(api_key, messages):
+    # Sends conversation to Groq and returns the reply
+    url = "https://api.groq.com/openai/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": "llama-3.1-8b-instant",
+        "messages": messages,
+        "max_tokens": 500,
+        "temperature": 0.7
+    }
+    result = requests.post(url, headers=headers, json=payload, timeout=15).json()
+    return result["choices"][0]["message"]["content"]
+
+# ========================
+# ROUTES
+# ========================
 
 @app.route('/')
 def home():
@@ -149,7 +220,7 @@ header{padding:18px 20px 14px;background:rgba(7,8,15,0.85);backdrop-filter:blur(
       <div class="upload-icon">📂</div>
       <div class="upload-text">
         <strong>Upload your documents</strong>
-        <span>PDF files &middot; Multiple allowed &middot; Instant processing</span>
+        <span>PDF files · Multiple allowed · Instant processing</span>
       </div>
       <button class="upload-btn-sm" onclick="event.stopPropagation();document.getElementById('pdffile').click()">Browse</button>
     </div>
@@ -176,7 +247,7 @@ header{padding:18px 20px 14px;background:rgba(7,8,15,0.85);backdrop-filter:blur(
       <input type="text" id="msg" placeholder="Ask anything about your documents..." onkeypress="if(event.key==='Enter')send()">
       <button id="send-btn" onclick="send()">&#10148;</button>
     </div>
-    <div class="powered-by">Powered by <span>RAG</span> &middot; Built by <span>Piyush Sambhwani</span></div>
+    <div class="powered-by">Powered by <span>RAG</span> · Built by <span>Piyush Sambhwani</span></div>
   </div>
 </div>
 <script>
@@ -233,7 +304,9 @@ def upload():
             pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
             full_text = ""
             for page in pdf_reader.pages:
-                full_text += page.extract_text()
+                text = page.extract_text()
+                if text:
+                    full_text += text
             full_text = clean(full_text)
             all_pdf_chunks[file.filename] = split_into_chunks(full_text, 300)
             uploaded_names.append(file.filename)
@@ -243,7 +316,7 @@ def upload():
             "files": uploaded_names
         })
     except Exception as e:
-        return jsonify({"message": "Error reading PDF!", "files": []})
+        return jsonify({"message": f"Error reading PDF: {str(e)}", "files": []})
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -255,62 +328,54 @@ def chat():
         if not all_pdf_chunks:
             return jsonify({"reply": "Please upload a PDF first!", "source": ""})
 
+        # Find the best matching chunk using TF-IDF
         best_chunk, source_pdf = find_best_chunk(msg, all_pdf_chunks)
 
+        # System prompt — tells Groq to only answer from PDF content
         system = f"""You are a helpful AI assistant built by Piyush Sambhwani.
-Answer questions based on this content only:
+Answer questions based ONLY on this content:
 
 {best_chunk}
 
-Be helpful and precise. Plain text only, no ** symbols.
-If answer is not in content, say you dont have that information."""
+Rules:
+- Be helpful and precise
+- Plain text only, no ** or markdown symbols
+- If answer is not in the content, say: I don't have that information in the uploaded documents."""
 
-        # ✅ Add user message to history
-        history.append({
-            "role": "user",
-            "content": msg
-        })
-
-        # ✅ Build full conversation for Gemini
-        gemini_messages = []
+        # Build messages list — system + full history + new question
+        messages = [{"role": "system", "content": system}]
         for h in history:
-            gemini_messages.append({
-                "role": h["role"],
-                "parts": [{"text": h["content"]}]
-            })
+            messages.append({"role": h["role"], "content": h["content"]})
+        messages.append({"role": "user", "content": msg})
 
+        # Add user message to history
+        history.append({"role": "user", "content": msg})
+
+        # Try each API key randomly until one works
         keys = API_KEYS.copy()
         random.shuffle(keys)
 
         for key in keys:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key}"
-            payload = {
-                "system_instruction": {
-                    "parts": [{"text": system}]
-                },
-                "contents": gemini_messages
-            }
-            result = requests.post(url, json=payload, timeout=15).json()
+            try:
+                reply = ask_groq(key, messages)
+                reply = clean(reply)
 
-            if "candidates" in result:
-                reply = clean(result["candidates"][0]["content"]["parts"][0]["text"])
+                # Add AI reply to history
+                history.append({"role": "assistant", "content": reply})
 
-                # ✅ Add AI reply to history
-                history.append({
-                    "role": "model",
-                    "content": reply
-                })
-
-                # ✅ Keep only last 10 messages
+                # Keep only last 10 messages to avoid overload
                 if len(history) > 10:
                     history = history[-10:]
 
                 return jsonify({"reply": reply, "source": source_pdf})
 
-        return jsonify({"reply": "Please try again!", "source": ""})
+            except Exception:
+                continue
+
+        return jsonify({"reply": "All API keys failed. Please try again!", "source": ""})
 
     except Exception as e:
-        return jsonify({"reply": "Something went wrong!", "source": ""})
+        return jsonify({"reply": f"Something went wrong: {str(e)}", "source": ""})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
