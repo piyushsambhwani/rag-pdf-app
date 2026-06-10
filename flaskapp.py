@@ -9,30 +9,21 @@ import PyPDF2
 
 app = Flask(__name__)
 
-# ✅ Keys come from Render environment variables — never hardcoded
+# Keys from Render environment variables — never hardcoded
 API_KEYS = [
     os.environ.get("GROQ_KEY_1", ""),
     os.environ.get("GROQ_KEY_2", ""),
     os.environ.get("GROQ_KEY_3", ""),
 ]
-# Remove empty keys in case some are not set
 API_KEYS = [k for k in API_KEYS if k]
 
-# Storage for all PDF chunks and chat history
 all_pdf_chunks = {}
 history = []
 
-# ========================
-# HELPER FUNCTIONS
-# ========================
-
 def clean(text):
-    # Removes extra spaces and weird whitespace
     return re.sub(r'\s+', ' ', text).strip()
 
 def split_into_chunks(text, chunk_size=300):
-    # Cuts long text into 300-word pieces
-    # Like cutting a long rope into equal smaller pieces
     words = text.split()
     chunks = []
     for i in range(0, len(words), chunk_size):
@@ -41,66 +32,38 @@ def split_into_chunks(text, chunk_size=300):
     return chunks
 
 def find_best_chunk(question, all_chunks_dict):
-    # TF-IDF Search — smarter than simple word matching
-    # Rare important words score higher than common words
-
     stopwords = {
         'the','a','an','is','it','in','on','at','to','for','of','and','or',
         'what','how','when','where','who','which','does','do','are','was',
         'were','will','can','could','should','would','have','has','had',
         'be','been','being','me','my','your','i','tell','about','please'
     }
-
-    # Get only the important words from the question
     question_words = set(question.lower().split()) - stopwords
-
-    # Collect ALL chunks from ALL PDFs into one flat list
-    # Needed so IDF knows total number of chunks
     all_chunks_flat = []
     for chunks in all_chunks_dict.values():
         all_chunks_flat.extend(chunks)
-
     total_chunks = len(all_chunks_flat)
-
     if total_chunks == 0:
         return "", ""
-
     best_chunk = ""
     best_score = 0
     best_pdf = ""
-
-    # Go through every chunk in every PDF
     for pdf_name, chunks in all_chunks_dict.items():
         for chunk in chunks:
-
             chunk_words = chunk.lower().split()
             score = 0
-
             for word in question_words:
-
-                # TF = how often this word appears in THIS chunk
-                # Example: "biryani" appears 3 times in 300 words = 0.01
                 tf = chunk_words.count(word) / len(chunk_words) if chunk_words else 0
-
-                # IDF = how RARE this word is across ALL chunks
-                # Rare words get higher score, common words get lower score
-                chunks_with_word = sum(
-                    1 for c in all_chunks_flat if word in c.lower().split()
-                )
+                chunks_with_word = sum(1 for c in all_chunks_flat if word in c.lower().split())
                 idf = math.log(total_chunks / (chunks_with_word + 1)) + 1
-
-                # Final TF-IDF score for this word
                 score += tf * idf
-
             if score > best_score:
                 best_score = score
                 best_chunk = chunk
                 best_pdf = pdf_name
-
     return best_chunk, best_pdf
 
 def ask_groq(api_key, messages):
-    # Sends conversation to Groq and returns the reply
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -115,9 +78,46 @@ def ask_groq(api_key, messages):
     result = requests.post(url, headers=headers, json=payload, timeout=15).json()
     return result["choices"][0]["message"]["content"]
 
-# ========================
-# ROUTES
-# ========================
+@app.route('/load-demo', methods=['POST'])
+def load_demo():
+    global all_pdf_chunks, history
+    history = []
+    demo_text = """
+    DocMind AI is a RAG powered document intelligence system built by Piyush Sambhwani.
+    It allows any business to upload their documents and instantly get answers from them using AI.
+
+    Services offered by Piyush Sambhwani include custom AI document assistants, WhatsApp AI bots,
+    clinic and hospital AI assistants, restaurant menu AI systems, legal document analyzers,
+    HR policy assistants, e-commerce product assistants, and educational AI tutors.
+
+    Pricing packages are as follows.
+    Basic package costs 35 dollars and includes a single document AI assistant with
+    standard question answering, delivered in 3 days.
+    Standard package costs 75 dollars and includes multi-document support, conversation memory,
+    custom branding, and cloud deployment, delivered in 5 days.
+    Premium package costs 150 dollars and includes everything in standard plus priority support,
+    unlimited revisions, WhatsApp integration, and 30 days of free maintenance, delivered in 7 days.
+
+    Technology used includes Python, Flask, Groq AI with Llama 3, RAG retrieval augmented generation,
+    TF-IDF smart search, and cloud deployment on Render. All apps are mobile friendly and work on any device.
+
+    Industries served include restaurants, clinics, law firms, schools and colleges, HR departments,
+    real estate agencies, e-commerce stores, and any business with documents they want to make searchable.
+
+    How it works in 3 steps. Step one, you share your business documents like menus, policies,
+    price lists, or FAQs. Step two, Piyush builds a custom AI system trained on your documents.
+    Step three, your customers or staff can ask questions and get instant accurate answers 24 hours a day.
+
+    Why choose this service. This is not a generic chatbot. It reads YOUR actual documents and answers
+    from them. No wrong answers from the internet. Only answers from your own content.
+    Responses are instant, available 24 hours, never tired, never on leave.
+
+    Contact and ordering. Available on Fiverr at fiverr.com/piyushsam. Response guaranteed within 24 hours.
+    Free consultation available before ordering. 100 percent satisfaction guarantee with unlimited revisions.
+    Secure payment through Fiverr platform.
+    """
+    all_pdf_chunks["DocMind_Demo.pdf"] = split_into_chunks(clean(demo_text), 300)
+    return jsonify({"message": "Demo loaded! Ask me anything — pricing, services, how it works..."})
 
 @app.route('/')
 def home():
@@ -126,41 +126,50 @@ def home():
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DocMind AI</title>
+<title>DocMind AI — by Piyush Sambhwani</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#07080f;--surface:#0d0f1a;--surface2:#111320;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);--accent:#7c5cfc;--accent2:#5eead4;--accent3:#f472b6;--text:#f1f5f9;--muted:#64748b;}
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{height:100%;overflow:hidden;}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;position:relative;overflow:hidden;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .bg-orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:0.12;pointer-events:none;z-index:0;animation:drift 8s ease-in-out infinite;}
 .o1{width:400px;height:400px;background:#7c5cfc;top:-100px;left:-100px;}
 .o2{width:300px;height:300px;background:#5eead4;bottom:-80px;right:-80px;animation-delay:-3s;}
 .o3{width:200px;height:200px;background:#f472b6;top:50%;left:50%;animation-delay:-5s;}
 @keyframes drift{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(20px,-20px) scale(1.05);}66%{transform:translate(-15px,15px) scale(0.95);}}
 .layout{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh;max-width:520px;margin:0 auto;width:100%;}
-header{padding:18px 20px 14px;background:rgba(7,8,15,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);flex-shrink:0;}
-.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+header{padding:14px 20px 12px;background:rgba(7,8,15,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);flex-shrink:0;}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 .brand{display:flex;align-items:center;gap:10px;}
-.brand-icon{width:38px;height:38px;background:linear-gradient(135deg,#7c5cfc,#5eead4);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 20px rgba(124,92,252,0.4);}
-.brand-name{font-size:16px;font-weight:700;letter-spacing:-0.5px;}
+.brand-icon{width:36px;height:36px;background:linear-gradient(135deg,#7c5cfc,#5eead4);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 20px rgba(124,92,252,0.4);}
+.brand-name{font-size:15px;font-weight:700;letter-spacing:-0.5px;}
 .brand-name span{color:var(--accent);}
-.status-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.2);border-radius:20px;font-size:11px;color:var(--accent2);font-family:'JetBrains Mono',monospace;}
-.status-dot{width:6px;height:6px;background:var(--accent2);border-radius:50%;animation:pulse-dot 2s infinite;}
+.brand-sub{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.status-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.2);border-radius:20px;font-size:10px;color:var(--accent2);font-family:'JetBrains Mono',monospace;}
+.status-dot{width:5px;height:5px;background:var(--accent2);border-radius:50%;animation:pulse-dot 2s infinite;}
 @keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:0.3;}}
-.upload-zone{border:1.5px dashed rgba(124,92,252,0.3);border-radius:14px;padding:12px 16px;cursor:pointer;transition:all 0.3s;background:rgba(124,92,252,0.04);display:flex;align-items:center;gap:12px;position:relative;overflow:hidden;}
-.upload-zone::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(124,92,252,0.08),transparent);opacity:0;transition:opacity 0.3s;}
-.upload-zone:hover::before{opacity:1;}
-.upload-zone:hover{border-color:rgba(124,92,252,0.6);transform:translateY(-1px);box-shadow:0 8px 24px rgba(124,92,252,0.15);}
-.upload-icon{width:36px;height:36px;background:rgba(124,92,252,0.15);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
-.upload-text{flex:1;}
-.upload-text strong{display:block;font-size:13px;font-weight:600;}
-.upload-text span{font-size:11px;color:var(--muted);}
-.upload-btn-sm{background:var(--accent);color:#fff;border:none;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;flex-shrink:0;transition:all 0.2s;}
-.upload-btn-sm:hover{background:#6b4de8;}
+.fiverr-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;background:linear-gradient(135deg,#1dbf73,#19a463);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;font-family:'Inter',sans-serif;transition:all 0.2s;box-shadow:0 4px 12px rgba(29,191,115,0.3);}
+.fiverr-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(29,191,115,0.4);}
+.use-cases{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
+.uc{padding:3px 10px;background:rgba(124,92,252,0.08);border:1px solid rgba(124,92,252,0.2);border-radius:20px;font-size:10px;color:#a78bfa;}
+.upload-row{display:flex;gap:8px;align-items:stretch;}
+.upload-zone{flex:1;border:1.5px dashed rgba(124,92,252,0.3);border-radius:12px;padding:10px 14px;cursor:pointer;transition:all 0.3s;background:rgba(124,92,252,0.04);display:flex;align-items:center;gap:10px;}
+.upload-zone:hover{border-color:rgba(124,92,252,0.6);background:rgba(124,92,252,0.08);}
+.upload-icon{font-size:18px;}
+.upload-text strong{display:block;font-size:12px;font-weight:600;}
+.upload-text span{font-size:10px;color:var(--muted);}
+.demo-btn{padding:10px 14px;background:linear-gradient(135deg,rgba(94,234,212,0.15),rgba(124,92,252,0.15));border:1.5px solid rgba(94,234,212,0.3);border-radius:12px;color:var(--accent2);font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;white-space:nowrap;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+.demo-btn:hover{background:rgba(94,234,212,0.2);transform:translateY(-1px);}
+.demo-btn span{font-size:16px;}
 .pdf-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
 .chip{display:flex;align-items:center;gap:4px;padding:3px 10px;background:rgba(124,92,252,0.12);border:1px solid rgba(124,92,252,0.25);border-radius:20px;font-size:11px;color:#a78bfa;animation:chip-in 0.3s ease;}
 @keyframes chip-in{from{opacity:0;transform:scale(0.8);}to{opacity:1;transform:scale(1);}}
+.stats-bar{display:flex;justify-content:space-around;padding:8px 0 0;border-top:1px solid var(--border);margin-top:8px;}
+.stat{text-align:center;}
+.stat-num{font-size:13px;font-weight:700;color:var(--accent);}
+.stat-label{font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
 .chat{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin;scrollbar-color:rgba(124,92,252,0.2) transparent;}
 .chat::-webkit-scrollbar{width:4px;}
 .chat::-webkit-scrollbar-thumb{background:rgba(124,92,252,0.3);border-radius:4px;}
@@ -172,22 +181,22 @@ header{padding:18px 20px 14px;background:rgba(7,8,15,0.85);backdrop-filter:blur(
 .avatar{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
 .ai-av{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;}
 .user-av{background:rgba(124,92,252,0.2);color:var(--accent);}
-.sender-name{font-size:11px;font-weight:600;color:var(--muted);letter-spacing:0.3px;}
-.bubble{padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.65;position:relative;}
+.sender-name{font-size:11px;font-weight:600;color:var(--muted);}
+.bubble{padding:11px 15px;border-radius:16px;font-size:13.5px;line-height:1.65;}
 .msg.user .bubble{background:linear-gradient(135deg,#7c5cfc,#5b3fd4);color:#fff;border-bottom-right-radius:4px;box-shadow:0 4px 16px rgba(124,92,252,0.3);}
 .msg.ai .bubble{background:var(--surface2);border:1px solid var(--border2);border-bottom-left-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,0.3);}
 .source-tag{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 8px;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.15);border-radius:10px;font-size:10px;color:var(--accent2);font-family:'JetBrains Mono',monospace;}
 .typing-msg{display:none;padding:0 20px;}
 .typing-header{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
-.typing-bubble{padding:14px 18px;background:var(--surface2);border:1px solid var(--border2);border-radius:16px;border-bottom-left-radius:4px;display:inline-flex;align-items:center;gap:5px;}
+.typing-bubble{padding:12px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:16px;border-bottom-left-radius:4px;display:inline-flex;align-items:center;gap:5px;}
 .dot{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:bounce 1.2s infinite;}
 .dot:nth-child(2){animation-delay:0.15s;background:var(--accent2);}
 .dot:nth-child(3){animation-delay:0.3s;background:var(--accent3);}
 @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-6px);opacity:1;}}
-.suggestions{padding:0 20px 10px;display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;}
-.sug{padding:7px 14px;background:rgba(124,92,252,0.06);border:1px solid rgba(124,92,252,0.2);border-radius:20px;font-size:12px;color:#a78bfa;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;}
+.suggestions{padding:0 20px 8px;display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;}
+.sug{padding:6px 13px;background:rgba(124,92,252,0.06);border:1px solid rgba(124,92,252,0.2);border-radius:20px;font-size:11.5px;color:#a78bfa;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;}
 .sug:hover{background:rgba(124,92,252,0.15);border-color:rgba(124,92,252,0.5);color:#fff;transform:translateY(-1px);}
-.input-wrap{padding:10px 20px 18px;background:rgba(7,8,15,0.9);backdrop-filter:blur(20px);border-top:1px solid var(--border);flex-shrink:0;}
+.input-wrap{padding:10px 20px 16px;background:rgba(7,8,15,0.9);backdrop-filter:blur(20px);border-top:1px solid var(--border);flex-shrink:0;}
 .input-box{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:16px;padding:6px 6px 6px 16px;transition:border-color 0.2s,box-shadow 0.2s;}
 .input-box:focus-within{border-color:rgba(124,92,252,0.5);box-shadow:0 0 0 3px rgba(124,92,252,0.08);}
 #msg{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;padding:6px 0;}
@@ -210,26 +219,45 @@ header{padding:18px 20px 14px;background:rgba(7,8,15,0.85);backdrop-filter:blur(
         <div class="brand-icon">🧠</div>
         <div>
           <div class="brand-name">Doc<span>Mind</span> AI</div>
-          <div style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;">by Piyush Sambhwani</div>
+          <div class="brand-sub">by Piyush Sambhwani</div>
         </div>
       </div>
-      <div class="status-pill"><div class="status-dot"></div>RAG LIVE</div>
-    </div>
-    <input type="file" id="pdffile" accept=".pdf" multiple style="display:none">
-    <div class="upload-zone" onclick="document.getElementById('pdffile').click()">
-      <div class="upload-icon">📂</div>
-      <div class="upload-text">
-        <strong>Upload your documents</strong>
-        <span>PDF files · Multiple allowed · Instant processing</span>
+      <div class="header-right">
+        <div class="status-pill"><div class="status-dot"></div>RAG LIVE</div>
+        <a href="https://www.fiverr.com/piyushsam" target="_blank" class="fiverr-btn">🚀 Hire Me</a>
       </div>
-      <button class="upload-btn-sm" onclick="event.stopPropagation();document.getElementById('pdffile').click()">Browse</button>
+    </div>
+    <div class="use-cases">
+      <div class="uc">🍽️ Restaurant</div>
+      <div class="uc">🏥 Clinic</div>
+      <div class="uc">⚖️ Legal</div>
+      <div class="uc">👔 HR</div>
+      <div class="uc">🛒 E-commerce</div>
+      <div class="uc">🎓 Education</div>
+    </div>
+    <div class="upload-row">
+      <input type="file" id="pdffile" accept=".pdf" multiple style="display:none">
+      <div class="upload-zone" onclick="document.getElementById('pdffile').click()">
+        <div class="upload-icon">📂</div>
+        <div class="upload-text">
+          <strong>Upload your documents</strong>
+          <span>PDF files · Multiple allowed · Instant AI processing</span>
+        </div>
+      </div>
+      <button class="demo-btn" onclick="loadDemo()"><span>⚡</span>Try Demo</button>
     </div>
     <div class="pdf-chips" id="pdf-chips"></div>
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-num">TF-IDF</div><div class="stat-label">Smart Search</div></div>
+      <div class="stat"><div class="stat-num">Multi-PDF</div><div class="stat-label">All Docs</div></div>
+      <div class="stat"><div class="stat-num">Memory</div><div class="stat-label">Remembers</div></div>
+      <div class="stat"><div class="stat-num">Instant</div><div class="stat-label">Answers</div></div>
+    </div>
   </header>
   <div class="chat" id="chat">
     <div class="msg ai">
       <div class="msg-header"><div class="avatar ai-av">AI</div><span class="sender-name">DocMind AI</span></div>
-      <div class="bubble">👋 Hello! Upload your business documents and I will answer any question from them instantly.</div>
+      <div class="bubble">👋 Welcome! Upload any business document and I will answer questions from it instantly.<br><br>⚡ Want to see it live right now? Hit <strong>Try Demo</strong> — no upload needed!</div>
     </div>
   </div>
   <div class="typing-msg" id="typing">
@@ -237,17 +265,17 @@ header{padding:18px 20px 14px;background:rgba(7,8,15,0.85);backdrop-filter:blur(
     <div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
   </div>
   <div class="suggestions" id="sugs">
-    <button class="sug" onclick="ask(this)">💰 Consultation fee?</button>
-    <button class="sug" onclick="ask(this)">🕐 Opening hours?</button>
-    <button class="sug" onclick="ask(this)">⭐ Premium package?</button>
-    <button class="sug" onclick="ask(this)">💳 How to pay?</button>
+    <button class="sug" onclick="ask(this)">💰 What are your prices?</button>
+    <button class="sug" onclick="ask(this)">⚡ How does it work?</button>
+    <button class="sug" onclick="ask(this)">🏢 Which industries?</button>
+    <button class="sug" onclick="ask(this)">📦 What is included?</button>
   </div>
   <div class="input-wrap">
     <div class="input-box">
       <input type="text" id="msg" placeholder="Ask anything about your documents..." onkeypress="if(event.key==='Enter')send()">
       <button id="send-btn" onclick="send()">&#10148;</button>
     </div>
-    <div class="powered-by">Powered by <span>RAG</span> · Built by <span>Piyush Sambhwani</span></div>
+    <div class="powered-by">Powered by <span>RAG + TF-IDF</span> · Built by <span>Piyush Sambhwani</span></div>
   </div>
 </div>
 <script>
@@ -259,9 +287,19 @@ document.getElementById('pdffile').onchange=function(){
   for(var i=0;i<files.length;i++){chips.innerHTML+='<div class="chip">&#128196; '+files[i].name+'</div>';}
   var fd=new FormData();
   for(var i=0;i<files.length;i++)fd.append('pdfs',files[i]);
-  fetch('/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{addMessage('ai','&#9989; '+d.message,null);});
+  fetch('/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{
+    addMessage('ai','&#9989; '+d.message,null);
+    document.getElementById('sugs').style.display='none';
+  });
 };
-function ask(btn){document.getElementById('msg').value=btn.textContent.slice(3);send();}
+function loadDemo(){
+  fetch('/load-demo',{method:'POST'}).then(r=>r.json()).then(d=>{
+    document.getElementById('pdf-chips').innerHTML='<div class="chip">&#9889; DocMind_Demo.pdf</div>';
+    addMessage('ai','&#9889; '+d.message,null);
+    document.getElementById('sugs').style.display='flex';
+  });
+}
+function ask(btn){document.getElementById('msg').value=btn.textContent.slice(2).trim();send();}
 function send(){
   var msg=document.getElementById('msg').value.trim();
   if(!msg)return;
@@ -324,56 +362,37 @@ def chat():
     try:
         data = request.json
         msg = data.get('message', '')
-
         if not all_pdf_chunks:
-            return jsonify({"reply": "Please upload a PDF first!", "source": ""})
-
-        # Find the best matching chunk using TF-IDF
+            return jsonify({"reply": "Please upload a PDF or click Try Demo first!", "source": ""})
         best_chunk, source_pdf = find_best_chunk(msg, all_pdf_chunks)
-
-        # System prompt — tells Groq to only answer from PDF content
-        system = f"""You are a helpful AI assistant built by Piyush Sambhwani.
+        system = f"""You are DocMind AI, a helpful assistant built by Piyush Sambhwani.
 Answer questions based ONLY on this content:
 
 {best_chunk}
 
 Rules:
-- Be helpful and precise
+- Be helpful, friendly and precise
 - Plain text only, no ** or markdown symbols
+- Keep answers concise and clear
 - If answer is not in the content, say: I don't have that information in the uploaded documents."""
-
-        # Build messages list — system + full history + new question
         messages = [{"role": "system", "content": system}]
         for h in history:
             messages.append({"role": h["role"], "content": h["content"]})
         messages.append({"role": "user", "content": msg})
-
-        # Add user message to history
         history.append({"role": "user", "content": msg})
-
-        # Try each API key randomly until one works
         keys = API_KEYS.copy()
         random.shuffle(keys)
-
         for key in keys:
             try:
                 reply = ask_groq(key, messages)
                 reply = clean(reply)
-
-                # Add AI reply to history
                 history.append({"role": "assistant", "content": reply})
-
-                # Keep only last 10 messages to avoid overload
                 if len(history) > 10:
                     history = history[-10:]
-
                 return jsonify({"reply": reply, "source": source_pdf})
-
             except Exception:
                 continue
-
-        return jsonify({"reply": "All API keys failed. Please try again!", "source": ""})
-
+        return jsonify({"reply": "All API keys busy. Please try again!", "source": ""})
     except Exception as e:
         return jsonify({"reply": f"Something went wrong: {str(e)}", "source": ""})
 
