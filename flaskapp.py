@@ -332,8 +332,13 @@ def load_clinic_demo():
     })
 
 
+from flask import render_template
+
 @app.route('/')
 def home():
+    return render_template('index.html')
+
+def home_old():
     return """<!DOCTYPE html>
 <html lang="en">
 <head>
