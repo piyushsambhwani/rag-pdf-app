@@ -4,25 +4,42 @@ import os
 import math
 import random
 import requests
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import PyPDF2
 
 app = Flask(__name__)
 
+# ============================================================
+# CONFIG — Load API keys from environment variables
+# Add as many keys as you have: GROQ_KEY_1, GROQ_KEY_2, etc.
+# ============================================================
 API_KEYS = [
     os.environ.get("GROQ_KEY_1", ""),
     os.environ.get("GROQ_KEY_2", ""),
     os.environ.get("GROQ_KEY_3", ""),
 ]
-API_KEYS = [k for k in API_KEYS if k]
+API_KEYS = [k for k in API_KEYS if k]  # Remove empty keys
 
+# Global storage — holds all PDF chunks and chat history
 all_pdf_chunks = {}
 history = []
 
+
+# ============================================================
+# HELPER FUNCTIONS
+# ============================================================
+
 def clean(text):
+    """Remove extra spaces and clean up text."""
     return re.sub(r'\s+', ' ', text).strip()
 
+
 def split_into_chunks(text, chunk_size=300):
+    """
+    Split big text into smaller pieces (chunks).
+    Like cutting a long book into pages.
+    chunk_size=300 means each chunk has ~300 words.
+    """
     words = text.split()
     chunks = []
     for i in range(0, len(words), chunk_size):
@@ -30,39 +47,68 @@ def split_into_chunks(text, chunk_size=300):
         chunks.append(chunk)
     return chunks
 
+
 def find_best_chunk(question, all_chunks_dict):
+    """
+    TF-IDF Search — finds the most relevant chunk for a question.
+
+    TF  = how often a word appears in this chunk (Term Frequency)
+    IDF = how rare that word is across all chunks (Inverse Document Frequency)
+    Score = TF * IDF — higher score means more relevant chunk.
+
+    This is RAG retrieval — find the right piece of info before asking AI.
+    """
+    # Common words that don't help find the right chunk
     stopwords = {
-        'the','a','an','is','it','in','on','at','to','for','of','and','or',
-        'what','how','when','where','who','which','does','do','are','was',
-        'were','will','can','could','should','would','have','has','had',
-        'be','been','being','me','my','your','i','tell','about','please'
+        'the', 'a', 'an', 'is', 'it', 'in', 'on', 'at', 'to', 'for',
+        'of', 'and', 'or', 'what', 'how', 'when', 'where', 'who', 'which',
+        'does', 'do', 'are', 'was', 'were', 'will', 'can', 'could',
+        'should', 'would', 'have', 'has', 'had', 'be', 'been', 'being',
+        'me', 'my', 'your', 'i', 'tell', 'about', 'please', 'give', 'show'
     }
+
+    # Get only meaningful words from the question
     question_words = set(question.lower().split()) - stopwords
+
+    # Flatten all chunks from all PDFs into one list (for IDF calculation)
     all_chunks_flat = []
     for chunks in all_chunks_dict.values():
         all_chunks_flat.extend(chunks)
+
     total_chunks = len(all_chunks_flat)
     if total_chunks == 0:
         return "", ""
+
     best_chunk = ""
     best_score = 0
     best_pdf = ""
+
+    # Score every chunk from every PDF
     for pdf_name, chunks in all_chunks_dict.items():
         for chunk in chunks:
             chunk_words = chunk.lower().split()
             score = 0
             for word in question_words:
+                # TF: how many times does this word appear in this chunk?
                 tf = chunk_words.count(word) / len(chunk_words) if chunk_words else 0
+                # IDF: how rare is this word across all chunks?
                 chunks_with_word = sum(1 for c in all_chunks_flat if word in c.lower().split())
                 idf = math.log(total_chunks / (chunks_with_word + 1)) + 1
                 score += tf * idf
+            # Keep track of the highest scoring chunk
             if score > best_score:
                 best_score = score
                 best_chunk = chunk
                 best_pdf = pdf_name
+
     return best_chunk, best_pdf
 
+
 def ask_groq(api_key, messages):
+    """
+    Call the Groq API with the conversation messages.
+    Uses llama-3.1-8b-instant — fast and free model.
+    """
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -74,18 +120,34 @@ def ask_groq(api_key, messages):
         "max_tokens": 500,
         "temperature": 0.7
     }
-    result = requests.post(url, headers=headers, json=payload, timeout=15).json()
+    response = requests.post(url, headers=headers, json=payload, timeout=15)
+    result = response.json()
     return result["choices"][0]["message"]["content"]
 
 
 # ============================================================
-# DEMO 1 — Original DocMind demo (already existed)
-# This loads info about Piyush's own services
+# SERVE THE FRONTEND HTML
 # ============================================================
+
+@app.route('/')
+def home():
+    """Serve the main landing page HTML file."""
+    return send_from_directory('.', 'docmind_improved.html')
+
+
+# ============================================================
+# DEMO 1 — DocMind AI Services Demo
+# Shows Piyush's own AI service packages and pricing
+# ============================================================
+
 @app.route('/load-demo', methods=['POST'])
 def load_demo():
     global all_pdf_chunks, history
+
+    # Reset everything for fresh demo
+    all_pdf_chunks = {}
     history = []
+
     demo_text = """
     DocMind AI is a RAG powered document intelligence system built by Piyush Sambhwani.
     It allows any business to upload their documents and instantly get answers from them using AI.
@@ -115,25 +177,26 @@ def load_demo():
     Contact and ordering. Available on Fiverr at fiverr.com/piyushsam. Response guaranteed within 24 hours.
     Free consultation available before ordering. 100 percent satisfaction guarantee with unlimited revisions.
     """
+
     all_pdf_chunks["DocMind_Demo.pdf"] = split_into_chunks(clean(demo_text), 300)
-    return jsonify({"message": "DocMind demo loaded! Ask me about pricing, services, or how it works."})
+
+    return jsonify({
+        "message": "🧠 DocMind AI demo loaded! Ask me about pricing, services, or how it works."
+    })
 
 
 # ============================================================
-# DEMO 2 — Restaurant Demo (NEW)
-# Imagine a real restaurant called Spice Garden
-# A restaurant owner will see this and think "this is for ME"
+# DEMO 2 — Restaurant Demo (Spice Garden)
+# Shows a restaurant owner exactly what their AI would look like
 # ============================================================
+
 @app.route('/load-restaurant-demo', methods=['POST'])
 def load_restaurant_demo():
     global all_pdf_chunks, history
 
-    # Clear old data and history so fresh demo starts
     all_pdf_chunks = {}
     history = []
 
-    # This is fake restaurant data — like a menu document
-    # In real client work, the client sends their actual menu PDF
     restaurant_text = """
     Welcome to Spice Garden Restaurant. We are open every day from 11 AM to 11 PM.
     We are located at 42 MG Road, Pune, Maharashtra. Phone number is 9876543210.
@@ -212,7 +275,6 @@ def load_restaurant_demo():
     Senior citizens get 5 percent discount on all orders.
     """
 
-    # Store this text as chunks — same as uploading a PDF
     all_pdf_chunks["SpiceGarden_Menu.pdf"] = split_into_chunks(clean(restaurant_text), 300)
 
     return jsonify({
@@ -221,19 +283,17 @@ def load_restaurant_demo():
 
 
 # ============================================================
-# DEMO 3 — Clinic Demo (NEW)
-# A fake clinic called CityHealth Clinic
-# A doctor or clinic owner will see this and want to buy
+# DEMO 3 — Clinic Demo (CityHealth Clinic)
+# Shows a doctor or clinic owner exactly what their AI would look like
 # ============================================================
+
 @app.route('/load-clinic-demo', methods=['POST'])
 def load_clinic_demo():
     global all_pdf_chunks, history
 
-    # Clear old data and start fresh
     all_pdf_chunks = {}
     history = []
 
-    # Fake clinic document — like their brochure or services PDF
     clinic_text = """
     Welcome to CityHealth Clinic. We are a multi-specialty clinic located at 15 FC Road, Pune.
     Our phone number is 020-4567890 and mobile is 9988776655.
@@ -324,7 +384,6 @@ def load_clinic_demo():
     Ambulance service can be arranged. Call 108 for free ambulance.
     """
 
-    # Store clinic text as chunks
     all_pdf_chunks["CityHealth_Clinic.pdf"] = split_into_chunks(clean(clinic_text), 300)
 
     return jsonify({
@@ -332,308 +391,10 @@ def load_clinic_demo():
     })
 
 
-@app.route('/')
-def home():
-    return """<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DocMind AI — by Piyush Sambhwani</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-:root{--bg:#07080f;--surface:#0d0f1a;--surface2:#111320;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);--accent:#7c5cfc;--accent2:#5eead4;--accent3:#f472b6;--text:#f1f5f9;--muted:#64748b;}
-*{margin:0;padding:0;box-sizing:border-box;}
-html,body{height:100%;overflow:hidden;}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden;}
-.bg-orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:0.12;pointer-events:none;z-index:0;animation:drift 8s ease-in-out infinite;}
-.o1{width:400px;height:400px;background:#7c5cfc;top:-100px;left:-100px;}
-.o2{width:300px;height:300px;background:#5eead4;bottom:-80px;right:-80px;animation-delay:-3s;}
-.o3{width:200px;height:200px;background:#f472b6;top:50%;left:50%;animation-delay:-5s;}
-@keyframes drift{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(20px,-20px) scale(1.05);}66%{transform:translate(-15px,15px) scale(0.95);}}
-.layout{position:relative;z-index:1;display:flex;flex-direction:column;height:100vh;max-width:520px;margin:0 auto;width:100%;}
-header{padding:14px 20px 12px;background:rgba(7,8,15,0.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);flex-shrink:0;}
-.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
-.brand{display:flex;align-items:center;gap:10px;}
-.brand-icon{width:36px;height:36px;background:linear-gradient(135deg,#7c5cfc,#5eead4);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 20px rgba(124,92,252,0.4);}
-.brand-name{font-size:15px;font-weight:700;letter-spacing:-0.5px;}
-.brand-name span{color:var(--accent);}
-.brand-sub{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
-.header-right{display:flex;align-items:center;gap:8px;}
-.status-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.2);border-radius:20px;font-size:10px;color:var(--accent2);font-family:'JetBrains Mono',monospace;}
-.status-dot{width:5px;height:5px;background:var(--accent2);border-radius:50%;animation:pulse-dot 2s infinite;}
-@keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:0.3;}}
-.fiverr-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;background:linear-gradient(135deg,#1dbf73,#19a463);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;font-family:'Inter',sans-serif;transition:all 0.2s;box-shadow:0 4px 12px rgba(29,191,115,0.3);}
-.fiverr-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(29,191,115,0.4);}
-.use-cases{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;}
-.uc{padding:3px 10px;background:rgba(124,92,252,0.08);border:1px solid rgba(124,92,252,0.2);border-radius:20px;font-size:10px;color:#a78bfa;}
-.upload-row{display:flex;gap:8px;align-items:stretch;}
-.upload-zone{flex:1;border:1.5px dashed rgba(124,92,252,0.3);border-radius:12px;padding:10px 14px;cursor:pointer;transition:all 0.3s;background:rgba(124,92,252,0.04);display:flex;align-items:center;gap:10px;}
-.upload-zone:hover{border-color:rgba(124,92,252,0.6);background:rgba(124,92,252,0.08);}
-.upload-icon{font-size:18px;}
-.upload-text strong{display:block;font-size:12px;font-weight:600;}
-.upload-text span{font-size:10px;color:var(--muted);}
-
-/* NEW — demo buttons row, 3 buttons side by side */
-.demo-row{display:flex;gap:6px;margin-top:8px;}
-
-/* Each demo button style */
-.demo-btn{flex:1;padding:8px 6px;border-radius:12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1.5px solid;}
-
-/* DocMind demo button — purple/teal color */
-.demo-btn.docmind{background:linear-gradient(135deg,rgba(94,234,212,0.15),rgba(124,92,252,0.15));border-color:rgba(94,234,212,0.3);color:var(--accent2);}
-.demo-btn.docmind:hover{background:rgba(94,234,212,0.2);transform:translateY(-1px);}
-
-/* Restaurant demo button — orange/warm color */
-.demo-btn.restaurant{background:linear-gradient(135deg,rgba(251,146,60,0.15),rgba(239,68,68,0.1));border-color:rgba(251,146,60,0.4);color:#fb923c;}
-.demo-btn.restaurant:hover{background:rgba(251,146,60,0.2);transform:translateY(-1px);}
-
-/* Clinic demo button — green/health color */
-.demo-btn.clinic{background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(16,185,129,0.1));border-color:rgba(34,197,94,0.4);color:#22c55e;}
-.demo-btn.clinic:hover{background:rgba(34,197,94,0.2);transform:translateY(-1px);}
-
-.demo-btn span{font-size:16px;}
-.pdf-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
-.chip{display:flex;align-items:center;gap:4px;padding:3px 10px;background:rgba(124,92,252,0.12);border:1px solid rgba(124,92,252,0.25);border-radius:20px;font-size:11px;color:#a78bfa;animation:chip-in 0.3s ease;}
-@keyframes chip-in{from{opacity:0;transform:scale(0.8);}to{opacity:1;transform:scale(1);}}
-.stats-bar{display:flex;justify-content:space-around;padding:8px 0 0;border-top:1px solid var(--border);margin-top:8px;}
-.stat{text-align:center;}
-.stat-num{font-size:13px;font-weight:700;color:var(--accent);}
-.stat-label{font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
-.chat{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin;scrollbar-color:rgba(124,92,252,0.2) transparent;}
-.chat::-webkit-scrollbar{width:4px;}
-.chat::-webkit-scrollbar-thumb{background:rgba(124,92,252,0.3);border-radius:4px;}
-.msg{display:flex;flex-direction:column;max-width:84%;animation:msg-in 0.35s cubic-bezier(0.34,1.56,0.64,1);}
-@keyframes msg-in{from{opacity:0;transform:translateY(10px) scale(0.96);}to{opacity:1;transform:translateY(0) scale(1);}}
-.msg.user{align-self:flex-end;align-items:flex-end;}
-.msg.ai{align-self:flex-start;align-items:flex-start;}
-.msg-header{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
-.avatar{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
-.ai-av{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;}
-.user-av{background:rgba(124,92,252,0.2);color:var(--accent);}
-.sender-name{font-size:11px;font-weight:600;color:var(--muted);}
-.bubble{padding:11px 15px;border-radius:16px;font-size:13.5px;line-height:1.65;}
-.msg.user .bubble{background:linear-gradient(135deg,#7c5cfc,#5b3fd4);color:#fff;border-bottom-right-radius:4px;box-shadow:0 4px 16px rgba(124,92,252,0.3);}
-.msg.ai .bubble{background:var(--surface2);border:1px solid var(--border2);border-bottom-left-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,0.3);}
-.source-tag{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 8px;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.15);border-radius:10px;font-size:10px;color:var(--accent2);font-family:'JetBrains Mono',monospace;}
-.typing-msg{display:none;padding:0 20px;}
-.typing-header{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
-.typing-bubble{padding:12px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:16px;border-bottom-left-radius:4px;display:inline-flex;align-items:center;gap:5px;}
-.dot{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:bounce 1.2s infinite;}
-.dot:nth-child(2){animation-delay:0.15s;background:var(--accent2);}
-.dot:nth-child(3){animation-delay:0.3s;background:var(--accent3);}
-@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-6px);opacity:1;}}
-.suggestions{padding:0 20px 8px;display:flex;flex-wrap:wrap;gap:6px;flex-shrink:0;}
-.sug{padding:6px 13px;background:rgba(124,92,252,0.06);border:1px solid rgba(124,92,252,0.2);border-radius:20px;font-size:11.5px;color:#a78bfa;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;}
-.sug:hover{background:rgba(124,92,252,0.15);border-color:rgba(124,92,252,0.5);color:#fff;transform:translateY(-1px);}
-.input-wrap{padding:10px 20px 16px;background:rgba(7,8,15,0.9);backdrop-filter:blur(20px);border-top:1px solid var(--border);flex-shrink:0;}
-.input-box{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:16px;padding:6px 6px 6px 16px;transition:border-color 0.2s,box-shadow 0.2s;}
-.input-box:focus-within{border-color:rgba(124,92,252,0.5);box-shadow:0 0 0 3px rgba(124,92,252,0.08);}
-#msg{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;padding:6px 0;}
-#msg::placeholder{color:var(--muted);}
-#send-btn{width:38px;height:38px;background:linear-gradient(135deg,#7c5cfc,#5b3fd4);border:none;border-radius:11px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;box-shadow:0 4px 12px rgba(124,92,252,0.4);}
-#send-btn:hover{transform:scale(1.05);}
-#send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
-.powered-by{text-align:center;font-size:10px;color:var(--muted);margin-top:8px;font-family:'JetBrains Mono',monospace;}
-.powered-by span{color:var(--accent);}
-</style>
-</head>
-<body>
-<div class="bg-orb o1"></div>
-<div class="bg-orb o2"></div>
-<div class="bg-orb o3"></div>
-<div class="layout">
-  <header>
-    <div class="header-top">
-      <div class="brand">
-        <div class="brand-icon">🧠</div>
-        <div>
-          <div class="brand-name">Doc<span>Mind</span> AI</div>
-          <div class="brand-sub">by Piyush Sambhwani</div>
-        </div>
-      </div>
-      <div class="header-right">
-        <div class="status-pill"><div class="status-dot"></div>RAG LIVE</div>
-        <a href="https://www.fiverr.com/piyushsam" target="_blank" class="fiverr-btn">🚀 Hire Me</a>
-      </div>
-    </div>
-    <div class="use-cases">
-      <div class="uc">🍽️ Restaurant</div>
-      <div class="uc">🏥 Clinic</div>
-      <div class="uc">⚖️ Legal</div>
-      <div class="uc">👔 HR</div>
-      <div class="uc">🛒 E-commerce</div>
-      <div class="uc">🎓 Education</div>
-    </div>
-    <div class="upload-row">
-      <input type="file" id="pdffile" accept=".pdf" multiple style="display:none">
-      <div class="upload-zone" onclick="document.getElementById('pdffile').click()">
-        <div class="upload-icon">📂</div>
-        <div class="upload-text">
-          <strong>Upload your documents</strong>
-          <span>PDF files · Multiple allowed · Instant AI processing</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- NEW: 3 demo buttons side by side -->
-    <div class="demo-row">
-      <button class="demo-btn docmind" onclick="loadDemo('docmind')">
-        <span>🧠</span>DocMind
-      </button>
-      <button class="demo-btn restaurant" onclick="loadDemo('restaurant')">
-        <span>🍽️</span>Restaurant
-      </button>
-      <button class="demo-btn clinic" onclick="loadDemo('clinic')">
-        <span>🏥</span>Clinic
-      </button>
-    </div>
-
-    <div class="pdf-chips" id="pdf-chips"></div>
-    <div class="stats-bar">
-      <div class="stat"><div class="stat-num">TF-IDF</div><div class="stat-label">Smart Search</div></div>
-      <div class="stat"><div class="stat-num">Multi-PDF</div><div class="stat-label">All Docs</div></div>
-      <div class="stat"><div class="stat-num">Memory</div><div class="stat-label">Remembers</div></div>
-      <div class="stat"><div class="stat-num">Instant</div><div class="stat-label">Answers</div></div>
-    </div>
-  </header>
-  <div class="chat" id="chat">
-    <div class="msg ai">
-      <div class="msg-header"><div class="avatar ai-av">AI</div><span class="sender-name">DocMind AI</span></div>
-      <div class="bubble">👋 Welcome! Upload any business document and I will answer questions from it instantly.<br><br>⚡ Try a live demo — <strong>🧠 DocMind</strong> for AI services, <strong>🍽️ Restaurant</strong> for a menu demo, or <strong>🏥 Clinic</strong> for a medical demo!</div>
-    </div>
-  </div>
-  <div class="typing-msg" id="typing">
-    <div class="typing-header"><div class="avatar ai-av">AI</div><span class="sender-name">DocMind AI</span></div>
-    <div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-  </div>
-  <div class="suggestions" id="sugs" style="display:none">
-    <button class="sug" onclick="ask(this)">💰 What are your prices?</button>
-    <button class="sug" onclick="ask(this)">⚡ How does it work?</button>
-    <button class="sug" onclick="ask(this)">🏢 Which industries?</button>
-    <button class="sug" onclick="ask(this)">📦 What is included?</button>
-  </div>
-  <div class="input-wrap">
-    <div class="input-box">
-      <input type="text" id="msg" placeholder="Ask anything about your documents..." onkeypress="if(event.key==='Enter')send()">
-      <button id="send-btn" onclick="send()">&#10148;</button>
-    </div>
-    <div class="powered-by">Powered by <span>RAG + TF-IDF</span> · Built by <span>Piyush Sambhwani</span></div>
-  </div>
-</div>
-<script>
-document.getElementById('pdffile').onchange=function(){
-  var files=this.files;
-  if(!files.length)return;
-  var chips=document.getElementById('pdf-chips');
-  chips.innerHTML='';
-  for(var i=0;i<files.length;i++){chips.innerHTML+='<div class="chip">&#128196; '+files[i].name+'</div>';}
-  var fd=new FormData();
-  for(var i=0;i<files.length;i++)fd.append('pdfs',files[i]);
-  fetch('/upload',{method:'POST',body:fd}).then(r=>r.json()).then(d=>{
-    addMessage('ai','&#9989; '+d.message,null);
-    document.getElementById('sugs').style.display='none';
-  });
-};
-
-// This function now handles all 3 demo types
-// type = 'docmind' or 'restaurant' or 'clinic'
-function loadDemo(type) {
-  // Pick the right URL based on which button was clicked
-  var url = '/load-demo';
-  var chipLabel = '⚡ DocMind_Demo.pdf';
-  var suggestions = [
-    '💰 What are your prices?',
-    '⚡ How does it work?',
-    '🏢 Which industries?',
-    '📦 What is included?'
-  ];
-
-  // If restaurant button clicked, use restaurant URL
-  if (type === 'restaurant') {
-    url = '/load-restaurant-demo';
-    chipLabel = '🍽️ SpiceGarden_Menu.pdf';
-    suggestions = [
-      '🍗 Do you have butter chicken?',
-      '🕐 What are your timings?',
-      '💰 How much is paneer tikka?',
-      '🥗 Show me vegetarian options'
-    ];
-  }
-
-  // If clinic button clicked, use clinic URL
-  if (type === 'clinic') {
-    url = '/load-clinic-demo';
-    chipLabel = '🏥 CityHealth_Clinic.pdf';
-    suggestions = [
-      '🩺 Which doctors are available?',
-      '💰 What is consultation fee?',
-      '🦷 Do you have dental services?',
-      '🕐 What are clinic timings?'
-    ];
-  }
-
-  // Call the backend route
-  fetch(url, {method:'POST'}).then(r=>r.json()).then(d=>{
-    // Show which file is loaded
-    document.getElementById('pdf-chips').innerHTML =
-      '<div class="chip">' + chipLabel + '</div>';
-
-    // Show the welcome message
-    addMessage('ai', d.message, null);
-
-    // Show relevant suggestion buttons
-    var sugsDiv = document.getElementById('sugs');
-    sugsDiv.innerHTML = '';
-    suggestions.forEach(function(s) {
-      var btn = document.createElement('button');
-      btn.className = 'sug';
-      btn.textContent = s;
-      btn.onclick = function(){ ask(this); };
-      sugsDiv.appendChild(btn);
-    });
-    sugsDiv.style.display = 'flex';
-  });
-}
-
-function ask(btn){
-  // Remove emoji from start when sending as question
-  var text = btn.textContent.trim();
-  // Remove first 2 chars if they are emoji + space
-  document.getElementById('msg').value = text.slice(2).trim();
-  send();
-}
-
-function send(){
-  var msg=document.getElementById('msg').value.trim();
-  if(!msg)return;
-  document.getElementById('sugs').style.display='none';
-  addMessage('user',msg,null);
-  document.getElementById('msg').value='';
-  document.getElementById('typing').style.display='block';
-  document.getElementById('send-btn').disabled=true;
-  document.getElementById('chat').scrollTop=document.getElementById('chat').scrollHeight;
-  fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})}).then(r=>r.json()).then(d=>{
-    document.getElementById('typing').style.display='none';
-    addMessage('ai',d.reply,d.source);
-    document.getElementById('send-btn').disabled=false;
-  });
-}
-
-function addMessage(role,text,source){
-  var chat=document.getElementById('chat');
-  var div=document.createElement('div');
-  div.className='msg '+role;
-  var av=role==='ai'?'<div class="avatar ai-av">AI</div>':'<div class="avatar user-av">Y</div>';
-  var name=role==='ai'?'DocMind AI':'You';
-  var src=source&&role==='ai'?'<div class="source-tag">&#128196; '+source+'</div>':'';
-  div.innerHTML='<div class="msg-header">'+av+'<span class="sender-name">'+name+'</span></div><div class="bubble">'+text+'</div>'+src;
-  chat.appendChild(div);
-  chat.scrollTop=chat.scrollHeight;
-}
-</script>
-</body>
-</html>"""
+# ============================================================
+# PDF UPLOAD — Real client documents
+# Client sends their actual PDF, we extract text and chunk it
+# ============================================================
 
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -642,64 +403,181 @@ def upload():
         files = request.files.getlist('pdfs')
         if not files:
             return jsonify({"message": "No files uploaded!", "files": []})
+
         uploaded_names = []
         for file in files:
+            # Read PDF bytes and extract all text
             pdf_reader = PyPDF2.PdfReader(io.BytesIO(file.read()))
             full_text = ""
             for page in pdf_reader.pages:
                 text = page.extract_text()
                 if text:
-                    full_text += text
+                    full_text += text + " "  # Space between pages
+
             full_text = clean(full_text)
+
+            if not full_text.strip():
+                # PDF had no extractable text (maybe scanned image)
+                return jsonify({
+                    "message": f"Could not read text from {file.filename}. Make sure it is not a scanned image PDF.",
+                    "files": []
+                })
+
+            # Split into chunks and store by filename
             all_pdf_chunks[file.filename] = split_into_chunks(full_text, 300)
             uploaded_names.append(file.filename)
+
         total_chunks = sum(len(v) for v in all_pdf_chunks.values())
         return jsonify({
-            "message": f"{len(uploaded_names)} PDF(s) loaded — {total_chunks} chunks ready!",
+            "message": f"✅ {len(uploaded_names)} PDF(s) loaded — {total_chunks} chunks ready! Now ask me anything.",
             "files": uploaded_names
         })
+
     except Exception as e:
-        return jsonify({"message": f"Error reading PDF: {str(e)}", "files": []})
+        return jsonify({
+            "message": f"Error reading PDF: {str(e)}",
+            "files": []
+        })
+
+
+# ============================================================
+# CHAT — The main RAG pipeline
+# 1. Find best chunk (retrieval)
+# 2. Build prompt with that chunk (augmentation)
+# 3. Send to Groq AI (generation)
+# ============================================================
 
 @app.route('/chat', methods=['POST'])
 def chat():
     global all_pdf_chunks, history
     try:
         data = request.json
-        msg = data.get('message', '')
-        if not all_pdf_chunks:
-            return jsonify({"reply": "Please upload a PDF or click a demo button first!", "source": ""})
-        best_chunk, source_pdf = find_best_chunk(msg, all_pdf_chunks)
-        system = f"""You are DocMind AI, a helpful assistant built by Piyush Sambhwani.
-Answer questions based ONLY on this content:
+        msg = data.get('message', '').strip()
 
+        if not msg:
+            return jsonify({"reply": "Please type a question!", "source": ""})
+
+        # No documents loaded yet
+        if not all_pdf_chunks:
+            return jsonify({
+                "reply": "Please upload a PDF or click a demo button first! 👆",
+                "source": ""
+            })
+
+        # Step 1 — RETRIEVAL: Find the most relevant chunk using TF-IDF
+        best_chunk, source_pdf = find_best_chunk(msg, all_pdf_chunks)
+
+        if not best_chunk:
+            return jsonify({
+                "reply": "I could not find relevant information. Please try a different question.",
+                "source": ""
+            })
+
+        # Step 2 — AUGMENTATION: Build the system prompt with the retrieved chunk
+        # This is where RAG magic happens — AI only knows what's in the chunk
+        system_prompt = f"""You are DocMind AI, a helpful assistant built by Piyush Sambhwani.
+Answer questions based ONLY on this content from the document:
+
+---
 {best_chunk}
+---
 
 Rules:
 - Be helpful, friendly and precise
-- Plain text only, no ** or markdown symbols
+- Use plain text only — no stars, no markdown symbols, no bullet dashes
 - Keep answers concise and clear
-- If answer is not in the content, say: I don't have that information in the uploaded documents."""
-        messages = [{"role": "system", "content": system}]
-        for h in history:
+- If the answer is not in the content above, say: I don't have that information in the uploaded documents.
+- Do not make up any information that is not in the content above."""
+
+        # Build messages: system + conversation history + new question
+        messages = [{"role": "system", "content": system_prompt}]
+
+        # Add last 10 messages from history (so AI remembers the conversation)
+        for h in history[-10:]:
             messages.append({"role": h["role"], "content": h["content"]})
+
+        # Add the current question
         messages.append({"role": "user", "content": msg})
+
+        # Save user message to history
         history.append({"role": "user", "content": msg})
+
+        # Step 3 — GENERATION: Try each API key (shuffle for load balancing)
         keys = API_KEYS.copy()
         random.shuffle(keys)
+
+        if not keys:
+            return jsonify({
+                "reply": "No API keys configured. Please set GROQ_KEY_1 in your environment variables.",
+                "source": ""
+            })
+
         for key in keys:
             try:
                 reply = ask_groq(key, messages)
                 reply = clean(reply)
+
+                # Save AI reply to history
                 history.append({"role": "assistant", "content": reply})
-                if len(history) > 10:
-                    history = history[-10:]
+
+                # Keep history trimmed to last 20 messages (10 exchanges)
+                if len(history) > 20:
+                    history = history[-20:]
+
                 return jsonify({"reply": reply, "source": source_pdf})
-            except Exception:
+
+            except Exception as api_error:
+                # This key failed, try the next one
+                print(f"API key failed: {str(api_error)}")
                 continue
-        return jsonify({"reply": "All API keys busy. Please try again!", "source": ""})
+
+        # All keys failed
+        return jsonify({
+            "reply": "All API keys are busy right now. Please try again in a moment!",
+            "source": ""
+        })
+
     except Exception as e:
-        return jsonify({"reply": f"Something went wrong: {str(e)}", "source": ""})
+        return jsonify({
+            "reply": f"Something went wrong: {str(e)}",
+            "source": ""
+        })
+
+
+# ============================================================
+# HEALTH CHECK — Useful for Render deployment monitoring
+# Visit /health to see if the server is running
+# ============================================================
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({
+        "status": "running",
+        "chunks_loaded": sum(len(v) for v in all_pdf_chunks.values()),
+        "pdfs_loaded": list(all_pdf_chunks.keys()),
+        "history_length": len(history),
+        "api_keys_configured": len(API_KEYS)
+    })
+
+
+# ============================================================
+# CLEAR — Reset everything (optional utility route)
+# POST to /clear to wipe all loaded documents and history
+# ============================================================
+
+@app.route('/clear', methods=['POST'])
+def clear():
+    global all_pdf_chunks, history
+    all_pdf_chunks = {}
+    history = []
+    return jsonify({"message": "All documents and history cleared."})
+
+
+# ============================================================
+# RUN THE APP
+# ============================================================
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
+
