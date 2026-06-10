@@ -14,6 +14,7 @@ API_KEYS = [
 ]
 
 all_pdf_chunks = {}
+history = []
 
 def clean(text):
     return re.sub(r'\s+', ' ', text).strip()
@@ -57,12 +58,12 @@ def home():
 <title>DocMind AI</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#07080f;--surface:#0d0f1a;--surface2:#111320;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);--accent:#7c5cfc;--accent2:#5eead4;--accent3:#f472b6;--text:#f1f5f9;--muted:#64748b;--muted2:#94a3b8;}
+:root{--bg:#07080f;--surface:#0d0f1a;--surface2:#111320;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);--accent:#7c5cfc;--accent2:#5eead4;--accent3:#f472b6;--text:#f1f5f9;--muted:#64748b;}
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{height:100%;overflow:hidden;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;position:relative;overflow:hidden;}
 .bg-orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:0.12;pointer-events:none;z-index:0;animation:drift 8s ease-in-out infinite;}
-.o1{width:400px;height:400px;background:#7c5cfc;top:-100px;left:-100px;animation-delay:0s;}
+.o1{width:400px;height:400px;background:#7c5cfc;top:-100px;left:-100px;}
 .o2{width:300px;height:300px;background:#5eead4;bottom:-80px;right:-80px;animation-delay:-3s;}
 .o3{width:200px;height:200px;background:#f472b6;top:50%;left:50%;animation-delay:-5s;}
 @keyframes drift{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(20px,-20px) scale(1.05);}66%{transform:translate(-15px,15px) scale(0.95);}}
@@ -105,8 +106,9 @@ header{padding:18px 20px 14px;background:rgba(7,8,15,0.85);backdrop-filter:blur(
 .msg.user .bubble{background:linear-gradient(135deg,#7c5cfc,#5b3fd4);color:#fff;border-bottom-right-radius:4px;box-shadow:0 4px 16px rgba(124,92,252,0.3);}
 .msg.ai .bubble{background:var(--surface2);border:1px solid var(--border2);border-bottom-left-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,0.3);}
 .source-tag{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 8px;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.15);border-radius:10px;font-size:10px;color:var(--accent2);font-family:'JetBrains Mono',monospace;}
-.typing-msg{display:none;align-self:flex-start;padding:0 20px 0;}
-.typing-bubble{padding:14px 18px;background:var(--surface2);border:1px solid var(--border2);border-radius:16px;border-bottom-left-radius:4px;display:flex;align-items:center;gap:5px;margin-top:5px;}
+.typing-msg{display:none;padding:0 20px;}
+.typing-header{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.typing-bubble{padding:14px 18px;background:var(--surface2);border:1px solid var(--border2);border-radius:16px;border-bottom-left-radius:4px;display:inline-flex;align-items:center;gap:5px;}
 .dot{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:bounce 1.2s infinite;}
 .dot:nth-child(2){animation-delay:0.15s;background:var(--accent2);}
 .dot:nth-child(3){animation-delay:0.3s;background:var(--accent3);}
@@ -120,7 +122,7 @@ header{padding:18px 20px 14px;background:rgba(7,8,15,0.85);backdrop-filter:blur(
 #msg{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Inter',sans-serif;font-size:14px;padding:6px 0;}
 #msg::placeholder{color:var(--muted);}
 #send-btn{width:38px;height:38px;background:linear-gradient(135deg,#7c5cfc,#5b3fd4);border:none;border-radius:11px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;box-shadow:0 4px 12px rgba(124,92,252,0.4);}
-#send-btn:hover{transform:scale(1.05);box-shadow:0 6px 18px rgba(124,92,252,0.5);}
+#send-btn:hover{transform:scale(1.05);}
 #send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
 .powered-by{text-align:center;font-size:10px;color:var(--muted);margin-top:8px;font-family:'JetBrains Mono',monospace;}
 .powered-by span{color:var(--accent);}
@@ -160,10 +162,7 @@ header{padding:18px 20px 14px;background:rgba(7,8,15,0.85);backdrop-filter:blur(
     </div>
   </div>
   <div class="typing-msg" id="typing">
-    <div style="display:flex;align-items:center;gap:6px;padding-left:0;">
-      <div class="avatar ai-av" style="width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:linear-gradient(135deg,#7c5cfc,#5eead4);color:#fff;">AI</div>
-      <span style="font-size:11px;font-weight:600;color:var(--muted);">DocMind AI</span>
-    </div>
+    <div class="typing-header"><div class="avatar ai-av">AI</div><span class="sender-name">DocMind AI</span></div>
     <div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
   </div>
   <div class="suggestions" id="sugs">
@@ -248,31 +247,68 @@ def upload():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    global all_pdf_chunks
+    global all_pdf_chunks, history
     try:
         data = request.json
         msg = data.get('message', '')
+
         if not all_pdf_chunks:
             return jsonify({"reply": "Please upload a PDF first!", "source": ""})
+
         best_chunk, source_pdf = find_best_chunk(msg, all_pdf_chunks)
-        if not best_chunk:
-            return jsonify({"reply": "Could not find relevant information.", "source": ""})
+
         system = f"""You are a helpful AI assistant built by Piyush Sambhwani.
 Answer questions based on this content only:
 
 {best_chunk}
 
-Be helpful and precise. Plain text only, no ** symbols."""
+Be helpful and precise. Plain text only, no ** symbols.
+If answer is not in content, say you dont have that information."""
+
+        # ✅ Add user message to history
+        history.append({
+            "role": "user",
+            "content": msg
+        })
+
+        # ✅ Build full conversation for Gemini
+        gemini_messages = []
+        for h in history:
+            gemini_messages.append({
+                "role": h["role"],
+                "parts": [{"text": h["content"]}]
+            })
+
         keys = API_KEYS.copy()
         random.shuffle(keys)
+
         for key in keys:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={key}"
-            payload = {"contents": [{"parts": [{"text": system + "\n\nQuestion: " + msg}]}]}
+            payload = {
+                "system_instruction": {
+                    "parts": [{"text": system}]
+                },
+                "contents": gemini_messages
+            }
             result = requests.post(url, json=payload, timeout=15).json()
+
             if "candidates" in result:
                 reply = clean(result["candidates"][0]["content"]["parts"][0]["text"])
+
+                # ✅ Add AI reply to history
+                history.append({
+                    "role": "model",
+                    "content": reply
+                })
+
+                # ✅ Keep only last 10 messages
+                if len(history) > 10:
+                    history = history[-10:]
+
                 return jsonify({"reply": reply, "source": source_pdf})
+
         return jsonify({"reply": "Please try again!", "source": ""})
+
     except Exception as e:
         return jsonify({"reply": "Something went wrong!", "source": ""})
 
