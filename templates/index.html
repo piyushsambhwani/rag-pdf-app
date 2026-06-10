@@ -4,242 +4,215 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DocMind AI — by Piyush Sambhwani</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#05060e;
-  --surface:#0c0e1a;
-  --surface2:#111427;
-  --surface3:#161928;
-  --border:rgba(255,255,255,0.06);
-  --border2:rgba(255,255,255,0.1);
-  --accent:#7c5cfc;
-  --accent2:#5eead4;
-  --accent3:#f472b6;
-  --accent4:#fb923c;
-  --text:#f1f5f9;
-  --muted:#64748b;
-  --muted2:#94a3b8;
-}
+:root{--bg:#07080f;--surface:#0d0f1a;--surface2:#111320;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);--accent:#7c5cfc;--accent2:#5eead4;--accent3:#f472b6;--text:#f1f5f9;--muted:#64748b;}
 *{margin:0;padding:0;box-sizing:border-box;}
 html{scroll-behavior:smooth;}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
 
-/* ── ambient orbs ── */
-.orb{position:fixed;border-radius:50%;filter:blur(100px);opacity:0.09;pointer-events:none;z-index:0;animation:drift 12s ease-in-out infinite;}
-.orb1{width:500px;height:500px;background:#7c5cfc;top:-150px;left:-150px;}
-.orb2{width:350px;height:350px;background:#5eead4;bottom:-100px;right:-100px;animation-delay:-4s;}
-.orb3{width:250px;height:250px;background:#f472b6;top:45%;left:40%;animation-delay:-7s;}
-@keyframes drift{0%,100%{transform:translate(0,0);}40%{transform:translate(25px,-25px);}70%{transform:translate(-15px,20px);}}
+/* ── orbs ── */
+.bg-orb{position:fixed;border-radius:50%;filter:blur(80px);opacity:0.12;pointer-events:none;z-index:0;animation:drift 8s ease-in-out infinite;}
+.o1{width:400px;height:400px;background:#7c5cfc;top:-100px;left:-100px;}
+.o2{width:300px;height:300px;background:#5eead4;bottom:-80px;right:-80px;animation-delay:-3s;}
+.o3{width:200px;height:200px;background:#f472b6;top:50%;left:50%;animation-delay:-5s;}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(20px,-20px) scale(1.05);}66%{transform:translate(-15px,15px) scale(0.95);}}
 
+/* ── layout wrapper ── */
 .page{position:relative;z-index:1;max-width:520px;margin:0 auto;width:100%;display:flex;flex-direction:column;min-height:100vh;}
 
-/* ══ HERO ══ */
-.hero{padding:40px 20px 32px;text-align:center;border-bottom:1px solid var(--border);}
+/* ══════════════════════════════════════
+   HERO SECTION — pain-focused headline
+══════════════════════════════════════ */
+.hero{padding:36px 24px 28px;text-align:center;border-bottom:1px solid var(--border);}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;background:rgba(124,92,252,0.1);border:1px solid rgba(124,92,252,0.25);border-radius:20px;font-size:10px;color:#a78bfa;font-family:'JetBrains Mono',monospace;margin-bottom:18px;letter-spacing:0.5px;}
+.hero-badge-dot{width:5px;height:5px;background:var(--accent);border-radius:50%;animation:pulse-dot 2s infinite;}
+@keyframes pulse-dot{0%,100%{opacity:1;}50%{opacity:0.3;}}
 
-.live-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.2);border-radius:20px;font-size:10px;color:var(--accent2);font-family:'JetBrains Mono',monospace;margin-bottom:22px;letter-spacing:0.8px;}
-.live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;box-shadow:0 0 8px #22c55e;animation:blink 2s infinite;}
-@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+.hero h1{font-size:26px;font-weight:800;line-height:1.25;letter-spacing:-0.8px;margin-bottom:12px;}
+.hero h1 .grad{background:linear-gradient(135deg,#7c5cfc,#5eead4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{font-size:13.5px;color:#94a3b8;line-height:1.6;max-width:380px;margin:0 auto 20px;}
 
-.hero h1{font-size:28px;font-weight:900;line-height:1.2;letter-spacing:-1px;margin-bottom:14px;}
-.hero h1 .g1{background:linear-gradient(135deg,#a78bfa,#7c5cfc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.hero h1 .g2{background:linear-gradient(135deg,#5eead4,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-industries{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-bottom:24px;}
+.ind{padding:4px 12px;background:rgba(255,255,255,0.04);border:1px solid var(--border2);border-radius:20px;font-size:11px;color:#94a3b8;}
 
-.hero-sub{font-size:13px;color:var(--muted2);line-height:1.7;max-width:360px;margin:0 auto 22px;}
+.hero-cta{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:linear-gradient(135deg,#7c5cfc,#5b3fd4);border:none;border-radius:14px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:none;box-shadow:0 8px 24px rgba(124,92,252,0.4);transition:all 0.2s;}
+.hero-cta:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(124,92,252,0.5);}
 
-.tags{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-bottom:26px;}
-.tag{padding:4px 13px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:20px;font-size:11px;color:#94a3b8;letter-spacing:0.2px;}
-
-.hero-btn{display:inline-flex;align-items:center;gap:8px;padding:13px 30px;background:linear-gradient(135deg,#7c5cfc,#5b3fd4);border:none;border-radius:14px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:none;box-shadow:0 8px 30px rgba(124,92,252,0.45);transition:all 0.25s;letter-spacing:0.2px;}
-.hero-btn:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(124,92,252,0.55);}
-
-/* ══ HOW IT WORKS ══ */
-.how{padding:32px 20px;border-bottom:1px solid var(--border);}
-.eyebrow{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--accent2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;}
-.how h2{font-size:19px;font-weight:800;margin-bottom:24px;letter-spacing:-0.5px;}
+/* ══════════════════════════════════════
+   HOW IT WORKS SECTION
+══════════════════════════════════════ */
+.how{padding:28px 24px;border-bottom:1px solid var(--border);}
+.section-label{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--accent2);letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;}
+.how h2{font-size:18px;font-weight:700;margin-bottom:20px;letter-spacing:-0.4px;}
 
 .steps{display:flex;flex-direction:column;gap:0;}
-.step{display:flex;gap:16px;padding:16px 0;position:relative;}
-.step:not(:last-child)::after{content:'';position:absolute;left:18px;top:54px;width:1px;height:calc(100% - 38px);background:linear-gradient(to bottom,rgba(124,92,252,0.25),transparent);}
-.step-num{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+.step{display:flex;gap:16px;align-items:flex-start;padding:16px 0;position:relative;}
+.step:not(:last-child)::after{content:'';position:absolute;left:19px;top:52px;width:2px;height:calc(100% - 36px);background:linear-gradient(to bottom,rgba(124,92,252,0.3),transparent);}
+.step-num{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;flex-shrink:0;font-family:'JetBrains Mono',monospace;}
 .s1 .step-num{background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.3);color:#a78bfa;}
 .s2 .step-num{background:rgba(94,234,212,0.1);border:1px solid rgba(94,234,212,0.25);color:var(--accent2);}
 .s3 .step-num{background:rgba(244,114,182,0.1);border:1px solid rgba(244,114,182,0.25);color:#f472b6;}
 .step-body strong{display:block;font-size:13.5px;font-weight:700;margin-bottom:4px;}
-.step-body p{font-size:12.5px;color:var(--muted2);line-height:1.6;}
+.step-body p{font-size:12.5px;color:#94a3b8;line-height:1.55;}
 
-/* ══ DEMO SECTION ══ */
-.demo-section{padding:24px 20px 0;}
-.demo-section h2{font-size:19px;font-weight:800;margin-bottom:5px;letter-spacing:-0.5px;}
-.demo-hint-text{font-size:12px;color:var(--muted);margin-bottom:18px;}
+/* ══════════════════════════════════════
+   LIVE DEMO SECTION
+══════════════════════════════════════ */
+.demo-section{padding:24px 24px 0;}
+.demo-section .section-label{margin-bottom:6px;}
+.demo-section h2{font-size:18px;font-weight:700;margin-bottom:6px;letter-spacing:-0.4px;}
+.demo-section .demo-hint{font-size:12px;color:#64748b;margin-bottom:16px;}
 
-/* app shell */
-.app-shell{background:var(--surface);border:1px solid var(--border2);border-radius:20px 20px 0 0;overflow:hidden;}
-
-.app-topbar{background:rgba(12,14,26,0.98);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:13px 16px 11px;}
-.topbar-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
-
+/* ── app header (original style preserved) ── */
+.app-header{background:rgba(13,15,26,0.95);backdrop-filter:blur(20px);border:1px solid var(--border2);border-radius:20px 20px 0 0;padding:14px 16px 10px;}
+.header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
 .brand{display:flex;align-items:center;gap:10px;}
-.brand-icon{width:36px;height:36px;background:linear-gradient(135deg,#7c5cfc,#5eead4);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 20px rgba(124,92,252,0.35);flex-shrink:0;}
-.brand-name{font-size:15px;font-weight:800;letter-spacing:-0.5px;}
-.brand-name span{background:linear-gradient(135deg,#a78bfa,#5eead4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
-.brand-by{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
-
-.topbar-right{display:flex;align-items:center;gap:8px;}
-.rag-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);border-radius:20px;font-size:10px;color:#4ade80;font-family:'JetBrains Mono',monospace;letter-spacing:0.5px;}
-.rag-dot{width:5px;height:5px;background:#22c55e;border-radius:50%;animation:blink 2s infinite;}
-.hire-btn{display:flex;align-items:center;gap:5px;padding:7px 13px;background:linear-gradient(135deg,#1dbf73,#16a34a);border:none;border-radius:9px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;font-family:'Inter',sans-serif;transition:all 0.2s;box-shadow:0 4px 14px rgba(29,191,115,0.3);white-space:nowrap;}
-.hire-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(29,191,115,0.4);}
+.brand-icon{width:36px;height:36px;background:linear-gradient(135deg,#7c5cfc,#5eead4);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 20px rgba(124,92,252,0.4);}
+.brand-name{font-size:15px;font-weight:700;letter-spacing:-0.5px;}
+.brand-name span{color:var(--accent);}
+.brand-sub{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.status-pill{display:flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.2);border-radius:20px;font-size:10px;color:var(--accent2);font-family:'JetBrains Mono',monospace;}
+.status-dot{width:5px;height:5px;background:var(--accent2);border-radius:50%;animation:pulse-dot 2s infinite;}
+.fiverr-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;background:linear-gradient(135deg,#1dbf73,#19a463);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;font-family:'Inter',sans-serif;transition:all 0.2s;box-shadow:0 4px 12px rgba(29,191,115,0.3);}
+.fiverr-btn:hover{transform:translateY(-1px);}
 
 /* demo buttons */
-.demo-row{display:flex;gap:7px;margin-bottom:10px;}
-.demo-btn{flex:1;padding:9px 6px;border-radius:11px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border:1.5px solid;letter-spacing:0.2px;}
-.demo-btn .icon{font-size:17px;line-height:1;}
-.demo-btn.docmind{background:rgba(124,92,252,0.1);border-color:rgba(124,92,252,0.3);color:#a78bfa;}
-.demo-btn.restaurant{background:rgba(251,146,60,0.1);border-color:rgba(251,146,60,0.35);color:#fb923c;}
-.demo-btn.clinic{background:rgba(34,197,94,0.08);border-color:rgba(34,197,94,0.3);color:#4ade80;}
-.demo-btn.active{transform:translateY(-1px);box-shadow:0 4px 16px rgba(124,92,252,0.25);}
+.demo-row{display:flex;gap:6px;margin-bottom:10px;}
+.demo-btn{flex:1;padding:8px 6px;border-radius:12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1.5px solid;}
+.demo-btn.docmind{background:linear-gradient(135deg,rgba(94,234,212,0.15),rgba(124,92,252,0.15));border-color:rgba(94,234,212,0.3);color:var(--accent2);}
+.demo-btn.restaurant{background:linear-gradient(135deg,rgba(251,146,60,0.15),rgba(239,68,68,0.1));border-color:rgba(251,146,60,0.4);color:#fb923c;}
+.demo-btn.clinic{background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(16,185,129,0.1));border-color:rgba(34,197,94,0.4);color:#22c55e;}
+.demo-btn span{font-size:16px;}
 .demo-btn:hover{transform:translateY(-1px);}
 
-/* guided questions */
-.guided-wrap{display:none;background:rgba(124,92,252,0.05);border:1px solid rgba(124,92,252,0.12);border-radius:10px;padding:11px 13px;margin-bottom:10px;}
-.guided-label{font-size:10.5px;color:#a78bfa;font-weight:600;margin-bottom:8px;font-family:'JetBrains Mono',monospace;letter-spacing:0.3px;}
+/* guided questions banner */
+.guided-banner{background:rgba(124,92,252,0.06);border:1px solid rgba(124,92,252,0.15);border-radius:12px;padding:10px 14px;margin-bottom:10px;display:none;}
+.guided-banner p{font-size:11px;color:#94a3b8;margin-bottom:8px;}
+.guided-banner strong{color:#a78bfa;font-size:11px;}
 .guided-qs{display:flex;flex-direction:column;gap:5px;}
-.guided-q{padding:7px 12px;background:rgba(124,92,252,0.07);border:1px solid rgba(124,92,252,0.15);border-radius:8px;font-size:11.5px;color:#c4b5fd;cursor:pointer;text-align:left;font-family:'Inter',sans-serif;transition:all 0.18s;line-height:1.4;}
-.guided-q:hover{background:rgba(124,92,252,0.18);color:#fff;border-color:rgba(124,92,252,0.35);}
+.guided-q{padding:7px 12px;background:rgba(124,92,252,0.08);border:1px solid rgba(124,92,252,0.2);border-radius:8px;font-size:11.5px;color:#c4b5fd;cursor:pointer;text-align:left;font-family:'Inter',sans-serif;transition:all 0.2s;}
+.guided-q:hover{background:rgba(124,92,252,0.18);color:#fff;}
 
-/* chips */
-.chips{display:flex;flex-wrap:wrap;gap:5px;min-height:10px;margin-bottom:8px;}
-.chip{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.2);border-radius:20px;font-size:10.5px;color:var(--accent2);font-family:'JetBrains Mono',monospace;animation:pop 0.3s cubic-bezier(0.34,1.56,0.64,1);}
-@keyframes pop{from{opacity:0;transform:scale(0.7);}to{opacity:1;transform:scale(1);}}
+.pdf-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;}
+.chip{display:flex;align-items:center;gap:4px;padding:3px 10px;background:rgba(124,92,252,0.12);border:1px solid rgba(124,92,252,0.25);border-radius:20px;font-size:11px;color:#a78bfa;animation:chip-in 0.3s ease;}
+@keyframes chip-in{from{opacity:0;transform:scale(0.8);}to{opacity:1;transform:scale(1);}}
 
-/* stats bar */
-.stats-bar{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border);padding:9px 0 2px;}
+.stats-bar{display:flex;justify-content:space-around;padding:8px 0 0;border-top:1px solid var(--border);}
 .stat{text-align:center;}
-.stat-val{font-size:11px;font-weight:800;color:var(--accent);font-family:'JetBrains Mono',monospace;}
-.stat-lbl{font-size:9px;color:var(--muted);margin-top:1px;letter-spacing:0.3px;}
+.stat-num{font-size:13px;font-weight:700;color:var(--accent);}
+.stat-label{font-size:9px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
 
-/* chat */
-.chat-area{border-left:1px solid var(--border2);border-right:1px solid var(--border2);background:var(--bg);}
-.chat{height:300px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin;scrollbar-color:rgba(124,92,252,0.2) transparent;}
-.chat::-webkit-scrollbar{width:3px;}
-.chat::-webkit-scrollbar-thumb{background:rgba(124,92,252,0.3);border-radius:3px;}
-
-.msg{display:flex;flex-direction:column;max-width:86%;animation:slide-in 0.3s cubic-bezier(0.34,1.4,0.64,1);}
-@keyframes slide-in{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+/* ── chat area ── */
+.chat-wrap{border:1px solid var(--border2);border-top:none;border-bottom:none;background:var(--bg);}
+.chat{height:280px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin;scrollbar-color:rgba(124,92,252,0.2) transparent;}
+.chat::-webkit-scrollbar{width:4px;}
+.chat::-webkit-scrollbar-thumb{background:rgba(124,92,252,0.3);border-radius:4px;}
+.msg{display:flex;flex-direction:column;max-width:84%;animation:msg-in 0.35s cubic-bezier(0.34,1.56,0.64,1);}
+@keyframes msg-in{from{opacity:0;transform:translateY(10px) scale(0.96);}to{opacity:1;transform:translateY(0) scale(1);}}
 .msg.user{align-self:flex-end;align-items:flex-end;}
 .msg.ai{align-self:flex-start;align-items:flex-start;}
+.msg-header{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.avatar{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}
+.ai-av{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;}
+.user-av{background:rgba(124,92,252,0.2);color:var(--accent);}
+.sender-name{font-size:11px;font-weight:600;color:var(--muted);}
+.bubble{padding:11px 15px;border-radius:16px;font-size:13.5px;line-height:1.65;}
+.msg.user .bubble{background:linear-gradient(135deg,#7c5cfc,#5b3fd4);color:#fff;border-bottom-right-radius:4px;box-shadow:0 4px 16px rgba(124,92,252,0.3);}
+.msg.ai .bubble{background:var(--surface2);border:1px solid var(--border2);border-bottom-left-radius:4px;box-shadow:0 4px 16px rgba(0,0,0,0.3);}
+.source-tag{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 8px;background:rgba(94,234,212,0.08);border:1px solid rgba(94,234,212,0.15);border-radius:10px;font-size:10px;color:var(--accent2);font-family:'JetBrains Mono',monospace;}
 
-.msg-meta{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
-.av{width:22px;height:22px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;}
-.av.ai{background:linear-gradient(135deg,#7c5cfc,#5eead4);color:#fff;}
-.av.user{background:rgba(124,92,252,0.2);color:#a78bfa;font-size:11px;}
-.msg-name{font-size:11px;font-weight:600;color:var(--muted);}
+.typing-msg{display:none;padding:0 16px 8px;}
+.typing-header{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
+.typing-bubble{padding:12px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:16px;border-bottom-left-radius:4px;display:inline-flex;align-items:center;gap:5px;}
+.dot{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:bounce 1.2s infinite;}
+.dot:nth-child(2){animation-delay:0.15s;background:var(--accent2);}
+.dot:nth-child(3){animation-delay:0.3s;background:var(--accent3);}
+@keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-6px);opacity:1;}}
 
-.bubble{padding:11px 15px;border-radius:16px;font-size:13px;line-height:1.7;}
-.msg.user .bubble{background:linear-gradient(135deg,#7c5cfc,#5535d4);color:#fff;border-bottom-right-radius:4px;box-shadow:0 4px 18px rgba(124,92,252,0.3);}
-.msg.ai .bubble{background:var(--surface2);border:1px solid var(--border2);border-bottom-left-radius:4px;color:var(--text);}
-
-.source-badge{display:inline-flex;align-items:center;gap:4px;margin-top:6px;padding:3px 9px;background:rgba(94,234,212,0.07);border:1px solid rgba(94,234,212,0.15);border-radius:10px;font-size:10px;color:var(--accent2);font-family:'JetBrains Mono',monospace;}
-
-/* typing */
-.typing{display:none;padding:0 16px 10px;}
-.typing-meta{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
-.typing-bubble{padding:11px 16px;background:var(--surface2);border:1px solid var(--border2);border-radius:16px;border-bottom-left-radius:4px;display:inline-flex;align-items:center;gap:6px;}
-.dot{width:7px;height:7px;border-radius:50%;animation:bob 1.2s infinite;}
-.dot:nth-child(1){background:var(--accent);animation-delay:0s;}
-.dot:nth-child(2){background:var(--accent2);animation-delay:0.15s;}
-.dot:nth-child(3){background:var(--accent3);animation-delay:0.3s;}
-@keyframes bob{0%,60%,100%{transform:translateY(0);opacity:0.4;}30%{transform:translateY(-7px);opacity:1;}}
-
-/* input */
-.input-area{background:rgba(5,6,14,0.98);border:1px solid var(--border2);border-top:none;border-radius:0 0 20px 20px;padding:12px 16px 16px;}
-.input-row{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:13px;padding:7px 7px 7px 15px;transition:border-color 0.2s,box-shadow 0.2s;}
-.input-row:focus-within{border-color:rgba(124,92,252,0.5);box-shadow:0 0 0 3px rgba(124,92,252,0.08);}
-#msg{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Inter',sans-serif;font-size:13.5px;padding:3px 0;}
+/* ── input area ── */
+.input-wrap{background:rgba(7,8,15,0.95);border:1px solid var(--border2);border-top:none;border-radius:0 0 20px 20px;padding:10px 16px 14px;}
+.input-box{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1.5px solid var(--border2);border-radius:14px;padding:6px 6px 6px 14px;transition:border-color 0.2s;}
+.input-box:focus-within{border-color:rgba(124,92,252,0.5);box-shadow:0 0 0 3px rgba(124,92,252,0.08);}
+#msg{flex:1;background:none;border:none;outline:none;color:var(--text);font-family:'Inter',sans-serif;font-size:13.5px;padding:6px 0;}
 #msg::placeholder{color:var(--muted);}
-#send-btn{width:36px;height:36px;background:linear-gradient(135deg,#7c5cfc,#5535d4);border:none;border-radius:9px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;box-shadow:0 4px 14px rgba(124,92,252,0.4);}
-#send-btn:hover{transform:scale(1.06);}
-#send-btn:disabled{opacity:0.35;cursor:not-allowed;transform:none;}
-.powered{text-align:center;font-size:10px;color:var(--muted);margin-top:9px;font-family:'JetBrains Mono',monospace;}
-.powered span{color:var(--accent);}
+#send-btn{width:36px;height:36px;background:linear-gradient(135deg,#7c5cfc,#5b3fd4);border:none;border-radius:10px;color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;box-shadow:0 4px 12px rgba(124,92,252,0.4);}
+#send-btn:hover{transform:scale(1.05);}
+#send-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;}
+.powered-by{text-align:center;font-size:10px;color:var(--muted);margin-top:8px;font-family:'JetBrains Mono',monospace;}
+.powered-by span{color:var(--accent);}
 
-/* upload zone */
-.upload-zone{margin:0 20px;border:1.5px dashed rgba(124,92,252,0.25);border-radius:14px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;background:rgba(124,92,252,0.03);}
-.upload-zone:hover{border-color:rgba(124,92,252,0.5);background:rgba(124,92,252,0.07);}
-.upload-icon{font-size:28px;margin-bottom:8px;}
-.upload-title{font-size:14px;font-weight:700;margin-bottom:4px;}
-.upload-sub{font-size:12px;color:var(--muted2);}
-#pdf-input{display:none;}
+/* ══════════════════════════════════════
+   SOCIAL PROOF STRIP
+══════════════════════════════════════ */
+.proof{padding:24px 24px;border-top:1px solid var(--border);}
+.proof .section-label{margin-bottom:14px;}
+.reviews{display:flex;flex-direction:column;gap:10px;}
+.review{background:var(--surface2);border:1px solid var(--border2);border-radius:14px;padding:14px 16px;}
+.stars{color:#fbbf24;font-size:12px;margin-bottom:6px;}
+.review-text{font-size:12.5px;color:#94a3b8;line-height:1.55;margin-bottom:8px;}
+.reviewer{font-size:11px;font-weight:600;color:#64748b;}
 
-/* ══ SOCIAL PROOF ══ */
-.proof{padding:32px 20px;border-top:1px solid var(--border);}
-.reviews{display:flex;flex-direction:column;gap:10px;margin-top:14px;}
-.review{background:var(--surface2);border:1px solid var(--border2);border-radius:14px;padding:15px 17px;transition:border-color 0.2s;}
-.review:hover{border-color:rgba(124,92,252,0.2);}
-.stars{color:#fbbf24;font-size:11px;letter-spacing:1px;margin-bottom:7px;}
-.review-text{font-size:12.5px;color:var(--muted2);line-height:1.6;margin-bottom:8px;}
-.reviewer{font-size:11px;font-weight:600;color:var(--muted);}
-
-/* ══ BOTTOM CTA ══ */
-.cta-section{padding:32px 20px 48px;text-align:center;border-top:1px solid var(--border);}
-.cta-section h2{font-size:22px;font-weight:900;letter-spacing:-0.7px;line-height:1.25;margin-bottom:10px;}
-.cta-section p{font-size:13px;color:var(--muted2);margin-bottom:24px;line-height:1.65;}
-.cta-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 32px;background:linear-gradient(135deg,#1dbf73,#16a34a);border:none;border-radius:14px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:none;box-shadow:0 8px 28px rgba(29,191,115,0.35);transition:all 0.25s;width:100%;}
-.cta-btn:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(29,191,115,0.45);}
-.cta-note{font-size:11px;color:var(--muted);margin-top:10px;font-family:'JetBrains Mono',monospace;}
-
-/* spacers between sections */
-.demo-section{padding:28px 20px 0;}
+/* ══════════════════════════════════════
+   BOTTOM CTA
+══════════════════════════════════════ */
+.bottom-cta{padding:28px 24px 40px;text-align:center;border-top:1px solid var(--border);}
+.bottom-cta h2{font-size:20px;font-weight:800;letter-spacing:-0.5px;margin-bottom:8px;}
+.bottom-cta p{font-size:13px;color:#94a3b8;margin-bottom:20px;line-height:1.6;}
+.cta-btns{display:flex;flex-direction:column;gap:10px;align-items:center;}
+.cta-primary{display:inline-flex;align-items:center;gap:8px;padding:13px 32px;background:linear-gradient(135deg,#1dbf73,#19a463);border:none;border-radius:14px;color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;text-decoration:none;box-shadow:0 8px 24px rgba(29,191,115,0.35);transition:all 0.2s;width:100%;justify-content:center;}
+.cta-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(29,191,115,0.45);}
+.cta-note{font-size:11px;color:#64748b;font-family:'JetBrains Mono',monospace;}
 </style>
 </head>
 <body>
-<div class="orb orb1"></div>
-<div class="orb orb2"></div>
-<div class="orb orb3"></div>
+<div class="bg-orb o1"></div>
+<div class="bg-orb o2"></div>
+<div class="bg-orb o3"></div>
 
 <div class="page">
 
   <!-- ══ HERO ══ -->
   <section class="hero">
-    <div class="live-badge"><div class="live-dot"></div>RAG LIVE · AI-POWERED</div>
-    <h1>Stop answering the<br><span class="g1">same questions.</span><br><span class="g2">Let AI do it.</span></h1>
-    <p class="hero-sub">Upload your menu, brochure, or policy — and your customers get instant, accurate answers 24/7. No staff. No WhatsApp spam.</p>
-    <div class="tags">
-      <div class="tag">🍽️ Restaurants</div>
-      <div class="tag">🏥 Clinics</div>
-      <div class="tag">⚖️ Law Firms</div>
-      <div class="tag">🎓 Schools</div>
-      <div class="tag">🛒 E-commerce</div>
-      <div class="tag">👔 HR Teams</div>
+    <div class="hero-badge"><div class="hero-badge-dot"></div>AI-POWERED · RAG SYSTEM · LIVE</div>
+    <h1>Your customers get answers.<br><span class="grad">You stop repeating yourself.</span></h1>
+    <p class="hero-sub">Upload your menu, policy, or brochure — and your customers instantly get answers 24/7, without calling you or your staff.</p>
+    <div class="hero-industries">
+      <div class="ind">🍽️ Restaurants</div>
+      <div class="ind">🏥 Clinics</div>
+      <div class="ind">⚖️ Law Firms</div>
+      <div class="ind">🎓 Schools</div>
+      <div class="ind">🛒 E-commerce</div>
+      <div class="ind">👔 HR Teams</div>
     </div>
-    <a href="https://www.fiverr.com/piyushsam" target="_blank" class="hero-btn">🚀 Get This For Your Business</a>
+    <a href="https://www.fiverr.com/piyushsam" target="_blank" class="hero-cta">🚀 Get This For Your Business</a>
   </section>
 
   <!-- ══ HOW IT WORKS ══ -->
   <section class="how">
-    <div class="eyebrow">⚡ HOW IT WORKS</div>
-    <h2>Ready in 3 days. Zero tech skills needed.</h2>
+    <div class="section-label">⚡ HOW IT WORKS</div>
+    <h2>Ready in 3 days. No tech skills needed.</h2>
     <div class="steps">
       <div class="step s1">
         <div class="step-num">1</div>
         <div class="step-body">
           <strong>You share your documents</strong>
-          <p>Send your menu, FAQ, clinic brochure, or price list as a PDF. No formatting needed.</p>
+          <p>Send your menu, price list, FAQ, clinic brochure — anything in PDF or text. No formatting needed.</p>
         </div>
       </div>
       <div class="step s2">
         <div class="step-num">2</div>
         <div class="step-body">
-          <strong>I build your custom AI</strong>
-          <p>Your AI learns every detail from your documents — prices, timings, services, policies.</p>
+          <strong>I build your custom AI system</strong>
+          <p>Your AI learns everything from your documents. It remembers every detail so you don't have to repeat yourself.</p>
         </div>
       </div>
       <div class="step s3">
         <div class="step-num">3</div>
         <div class="step-body">
-          <strong>Customers get instant answers</strong>
-          <p>Day or night, your AI answers accurately without anyone picking up a phone.</p>
+          <strong>Your customers get instant answers</strong>
+          <p>Day or night, your AI answers questions accurately — prices, timings, services — without any human needed.</p>
         </div>
       </div>
     </div>
@@ -247,93 +220,78 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 
   <!-- ══ LIVE DEMO ══ -->
   <section class="demo-section">
-    <div class="eyebrow">🎯 LIVE DEMO</div>
-    <h2>Try it yourself — right now</h2>
-    <p class="demo-hint-text">Pick a demo below, then tap the suggested questions.</p>
+    <div class="section-label">🎯 LIVE DEMO</div>
+    <h2>Try it yourself right now</h2>
+    <p class="demo-hint">Pick a demo below — then ask the suggested questions to see the magic.</p>
 
-    <div class="app-shell">
-      <div class="app-topbar">
-        <div class="topbar-row">
-          <div class="brand">
-            <div class="brand-icon">🧠</div>
-            <div>
-              <div class="brand-name">Doc<span>Mind</span> AI</div>
-              <div class="brand-by">by Piyush Sambhwani</div>
-            </div>
-          </div>
-          <div class="topbar-right">
-            <div class="rag-pill"><div class="rag-dot"></div>RAG LIVE</div>
-            <a href="https://www.fiverr.com/piyushsam" target="_blank" class="hire-btn">🚀 Hire Me</a>
+    <!-- app shell -->
+    <div class="app-header">
+      <div class="header-top">
+        <div class="brand">
+          <div class="brand-icon">🧠</div>
+          <div>
+            <div class="brand-name">Doc<span>Mind</span> AI</div>
+            <div class="brand-sub">by Piyush Sambhwani</div>
           </div>
         </div>
-
-        <div class="demo-row">
-          <button class="demo-btn docmind" id="btn-docmind" onclick="loadDemo('docmind')">
-            <span class="icon">🧠</span>DocMind
-          </button>
-          <button class="demo-btn restaurant" id="btn-restaurant" onclick="loadDemo('restaurant')">
-            <span class="icon">🍽️</span>Restaurant
-          </button>
-          <button class="demo-btn clinic" id="btn-clinic" onclick="loadDemo('clinic')">
-            <span class="icon">🏥</span>Clinic
-          </button>
-        </div>
-
-        <div class="guided-wrap" id="guided-wrap">
-          <div class="guided-label" id="guided-label"></div>
-          <div class="guided-qs" id="guided-qs"></div>
-        </div>
-
-        <div class="chips" id="chips"></div>
-
-        <div class="stats-bar">
-          <div class="stat"><div class="stat-val">TF-IDF</div><div class="stat-lbl">Smart Search</div></div>
-          <div class="stat"><div class="stat-val">Multi-PDF</div><div class="stat-lbl">All Docs</div></div>
-          <div class="stat"><div class="stat-val">Memory</div><div class="stat-lbl">Remembers</div></div>
-          <div class="stat"><div class="stat-val">Instant</div><div class="stat-lbl">Answers</div></div>
+        <div class="header-right">
+          <div class="status-pill"><div class="status-dot"></div>RAG LIVE</div>
+          <a href="https://www.fiverr.com/piyushsam" target="_blank" class="fiverr-btn">🚀 Hire Me</a>
         </div>
       </div>
 
-      <div class="chat-area">
-        <div class="chat" id="chat">
-          <div class="msg ai">
-            <div class="msg-meta"><div class="av ai">AI</div><span class="msg-name">DocMind AI</span></div>
-            <div class="bubble">👋 Pick a demo above — <strong>Restaurant</strong> or <strong>Clinic</strong> — then tap the suggested questions to see how I answer instantly from real documents.<br><br>This is exactly what your customers would experience.</div>
-          </div>
-        </div>
-        <div class="typing" id="typing">
-          <div class="typing-meta"><div class="av ai">AI</div><span class="msg-name">DocMind AI</span></div>
-          <div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-        </div>
+      <!-- 3 demo buttons -->
+      <div class="demo-row">
+        <button class="demo-btn docmind" onclick="loadDemo('docmind')"><span>🧠</span>DocMind</button>
+        <button class="demo-btn restaurant" onclick="loadDemo('restaurant')"><span>🍽️</span>Restaurant</button>
+        <button class="demo-btn clinic" onclick="loadDemo('clinic')"><span>🏥</span>Clinic</button>
       </div>
 
-      <div class="input-area">
-        <div class="input-row">
-          <input type="text" id="msg" placeholder="Ask anything about your documents..." onkeypress="if(event.key==='Enter')send()">
-          <button id="send-btn" onclick="send()">&#10148;</button>
-        </div>
-        <div class="powered">Powered by <span>RAG + TF-IDF</span> · Built by <span>Piyush Sambhwani</span></div>
+      <!-- guided questions banner — appears after demo loads -->
+      <div class="guided-banner" id="guided-banner">
+        <strong>👇 Try these questions to see it in action:</strong>
+        <p id="guided-hint"></p>
+        <div class="guided-qs" id="guided-qs"></div>
       </div>
+
+      <div class="pdf-chips" id="pdf-chips"></div>
+      <div class="stats-bar">
+        <div class="stat"><div class="stat-num">TF-IDF</div><div class="stat-label">Smart Search</div></div>
+        <div class="stat"><div class="stat-num">Multi-PDF</div><div class="stat-label">All Docs</div></div>
+        <div class="stat"><div class="stat-num">Memory</div><div class="stat-label">Remembers</div></div>
+        <div class="stat"><div class="stat-num">Instant</div><div class="stat-label">Answers</div></div>
+      </div>
+    </div>
+
+    <div class="chat-wrap">
+      <div class="chat" id="chat">
+        <div class="msg ai">
+          <div class="msg-header"><div class="avatar ai-av">AI</div><span class="sender-name">DocMind AI</span></div>
+          <div class="bubble">👋 Pick a demo above — <strong>Restaurant</strong> or <strong>Clinic</strong> — then tap the suggested questions to see how I answer instantly from real documents.<br><br>This is exactly what your customers would experience.</div>
+        </div>
+      </div>
+      <div class="typing-msg" id="typing">
+        <div class="typing-header"><div class="avatar ai-av">AI</div><span class="sender-name">DocMind AI</span></div>
+        <div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      </div>
+    </div>
+
+    <div class="input-wrap">
+      <div class="input-box">
+        <input type="text" id="msg" placeholder="Ask anything about the demo..." onkeypress="if(event.key==='Enter')send()">
+        <button id="send-btn" onclick="send()">&#10148;</button>
+      </div>
+      <div class="powered-by">Powered by <span>RAG + TF-IDF</span> · Built by <span>Piyush Sambhwani</span></div>
     </div>
   </section>
 
-  <!-- ══ UPLOAD ══ -->
-  <div style="padding:16px 20px 0;">
-    <div class="upload-zone" onclick="document.getElementById('pdf-input').click()">
-      <div class="upload-icon">📁</div>
-      <div class="upload-title">Upload your documents</div>
-      <div class="upload-sub">PDF files · Multiple allowed · Instant AI processing</div>
-      <input type="file" id="pdf-input" accept=".pdf" multiple onchange="uploadPDFs(this)">
-    </div>
-  </div>
-
   <!-- ══ SOCIAL PROOF ══ -->
   <section class="proof">
-    <div class="eyebrow">⭐ WHAT CLIENTS SAY</div>
+    <div class="section-label">⭐ WHAT CLIENTS SAY</div>
     <div class="reviews">
       <div class="review">
         <div class="stars">★★★★★</div>
-        <div class="review-text">"My restaurant used to get 30+ WhatsApp messages a day about the menu and timings. After this AI, almost zero. Customers just ask the bot."</div>
+        <div class="review-text">"My restaurant used to get 30+ WhatsApp messages a day asking about the menu and timings. After this AI, almost zero. Customers just ask the bot."</div>
         <div class="reviewer">— Restaurant Owner, Pune</div>
       </div>
       <div class="review">
@@ -350,69 +308,85 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
   </section>
 
   <!-- ══ BOTTOM CTA ══ -->
-  <section class="cta-section">
+  <section class="bottom-cta">
     <h2>Ready to stop answering<br>the same questions?</h2>
     <p>Get a custom AI system built for your business — delivered in 3 days, works on any device, 24/7.</p>
-    <a href="https://www.fiverr.com/piyushsam" target="_blank" class="cta-btn">🚀 Order on Fiverr — Starting $35</a>
-    <div class="cta-note">Free consultation · 100% satisfaction guarantee · Unlimited revisions</div>
+    <div class="cta-btns">
+      <a href="https://www.fiverr.com/piyushsam" target="_blank" class="cta-primary">🚀 Order on Fiverr — Starting $35</a>
+      <div class="cta-note">Free consultation · 100% satisfaction guarantee</div>
+    </div>
   </section>
 
 </div>
 
 <script>
+// ── demo data config ──
 const DEMOS = {
   docmind: {
     url: '/load-demo',
     chip: '⚡ DocMind_Demo.pdf',
-    label: '👇 Ask about Piyush\'s services:',
-    qs: ['💰 What does the Standard package cost?','⚡ How does it work in 3 steps?','🏢 Which industries do you serve?','📦 What is included in Premium?']
+    hint: 'Ask about Piyush\'s AI services:',
+    questions: [
+      '💰 What does the Standard package cost?',
+      '⚡ How does it work in 3 steps?',
+      '🏢 Which industries do you serve?',
+      '📦 What is included in Premium?'
+    ]
   },
   restaurant: {
     url: '/load-restaurant-demo',
     chip: '🍽️ SpiceGarden_Menu.pdf',
-    label: '👇 Ask the restaurant AI:',
-    qs: ['🍗 How much is Butter Chicken?','🕐 What time does the restaurant open?','🥗 What vegetarian starters do you have?','🎉 Do you offer catering for events?']
+    hint: 'Ask the restaurant AI:',
+    questions: [
+      '🍗 How much is Butter Chicken?',
+      '🕐 What time does the restaurant open?',
+      '🥗 What vegetarian starters do you have?',
+      '🎉 Do you offer catering for events?'
+    ]
   },
   clinic: {
     url: '/load-clinic-demo',
     chip: '🏥 CityHealth_Clinic.pdf',
-    label: '👇 Ask the clinic AI:',
-    qs: ['🩺 What is the consultation fee?','🦷 What dental services do you offer?','🕐 What are the clinic timings?','💊 Do you have home visit service?']
+    hint: 'Ask the clinic AI:',
+    questions: [
+      '🩺 What is the consultation fee?',
+      '🦷 What dental services do you offer?',
+      '🕐 What are the clinic timings?',
+      '💊 Do you have home visit service?'
+    ]
   }
 };
 
 function loadDemo(type) {
-  // highlight active button
-  ['docmind','restaurant','clinic'].forEach(t => {
-    document.getElementById('btn-'+t).classList.remove('active');
-  });
-  document.getElementById('btn-'+type).classList.add('active');
-
   const d = DEMOS[type];
   fetch(d.url, {method:'POST'}).then(r=>r.json()).then(data => {
     // chip
-    document.getElementById('chips').innerHTML = '<div class="chip">📄 ' + d.chip + '</div>';
+    document.getElementById('pdf-chips').innerHTML =
+      '<div class="chip">' + d.chip + '</div>';
 
-    // guided questions
-    const wrap = document.getElementById('guided-wrap');
-    document.getElementById('guided-label').textContent = d.label;
+    // welcome message
+    addMessage('ai', data.message, null);
+
+    // show guided banner
+    const banner = document.getElementById('guided-banner');
+    document.getElementById('guided-hint').textContent = d.hint;
     const qs = document.getElementById('guided-qs');
     qs.innerHTML = '';
-    d.qs.forEach(q => {
+    d.questions.forEach(q => {
       const btn = document.createElement('button');
       btn.className = 'guided-q';
       btn.textContent = q;
-      btn.onclick = () => askGuided(q);
+      btn.onclick = () => { askGuided(q); };
       qs.appendChild(btn);
     });
-    wrap.style.display = 'block';
-
-    addMessage('ai', data.message, null);
+    banner.style.display = 'block';
   });
 }
 
 function askGuided(text) {
-  document.getElementById('msg').value = text.slice(2).trim();
+  // strip emoji prefix (first 2 chars)
+  const clean = text.slice(2).trim();
+  document.getElementById('msg').value = clean;
   send();
 }
 
@@ -430,7 +404,7 @@ function send() {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
     body: JSON.stringify({message: msg})
-  }).then(r=>r.json()).then(d => {
+  }).then(r => r.json()).then(d => {
     document.getElementById('typing').style.display = 'none';
     addMessage('ai', d.reply, d.source);
     document.getElementById('send-btn').disabled = false;
@@ -441,29 +415,17 @@ function addMessage(role, text, source) {
   const chat = document.getElementById('chat');
   const div = document.createElement('div');
   div.className = 'msg ' + role;
-  const av = role === 'ai' ? '<div class="av ai">AI</div>' : '<div class="av user">Y</div>';
+  const av = role === 'ai'
+    ? '<div class="avatar ai-av">AI</div>'
+    : '<div class="avatar user-av">Y</div>';
   const name = role === 'ai' ? 'DocMind AI' : 'You';
-  const src = (source && role === 'ai') ? '<div class="source-badge">📄 ' + source + '</div>' : '';
-  div.innerHTML = '<div class="msg-meta">' + av + '<span class="msg-name">' + name + '</span></div><div class="bubble">' + text + '</div>' + src;
+  const src = (source && role === 'ai')
+    ? '<div class="source-tag">📄 ' + source + '</div>' : '';
+  div.innerHTML =
+    '<div class="msg-header">' + av + '<span class="sender-name">' + name + '</span></div>' +
+    '<div class="bubble">' + text + '</div>' + src;
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
-}
-
-function uploadPDFs(input) {
-  if (!input.files.length) return;
-  const form = new FormData();
-  for (let f of input.files) form.append('pdfs', f);
-  addMessage('ai', '⏳ Processing your PDF...', null);
-  fetch('/upload', {method:'POST', body: form})
-    .then(r=>r.json()).then(d => {
-      addMessage('ai', d.message, null);
-      if (d.files && d.files.length) {
-        const chips = document.getElementById('chips');
-        d.files.forEach(f => {
-          chips.innerHTML += '<div class="chip">📄 ' + f + '</div>';
-        });
-      }
-    });
 }
 </script>
 </body>
