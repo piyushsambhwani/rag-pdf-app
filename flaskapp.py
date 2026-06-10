@@ -9,7 +9,6 @@ import PyPDF2
 
 app = Flask(__name__)
 
-# Keys from Render environment variables — never hardcoded
 API_KEYS = [
     os.environ.get("GROQ_KEY_1", ""),
     os.environ.get("GROQ_KEY_2", ""),
@@ -78,6 +77,11 @@ def ask_groq(api_key, messages):
     result = requests.post(url, headers=headers, json=payload, timeout=15).json()
     return result["choices"][0]["message"]["content"]
 
+
+# ============================================================
+# DEMO 1 — Original DocMind demo (already existed)
+# This loads info about Piyush's own services
+# ============================================================
 @app.route('/load-demo', methods=['POST'])
 def load_demo():
     global all_pdf_chunks, history
@@ -108,16 +112,225 @@ def load_demo():
     price lists, or FAQs. Step two, Piyush builds a custom AI system trained on your documents.
     Step three, your customers or staff can ask questions and get instant accurate answers 24 hours a day.
 
-    Why choose this service. This is not a generic chatbot. It reads YOUR actual documents and answers
-    from them. No wrong answers from the internet. Only answers from your own content.
-    Responses are instant, available 24 hours, never tired, never on leave.
-
     Contact and ordering. Available on Fiverr at fiverr.com/piyushsam. Response guaranteed within 24 hours.
     Free consultation available before ordering. 100 percent satisfaction guarantee with unlimited revisions.
-    Secure payment through Fiverr platform.
     """
     all_pdf_chunks["DocMind_Demo.pdf"] = split_into_chunks(clean(demo_text), 300)
-    return jsonify({"message": "Demo loaded! Ask me anything — pricing, services, how it works..."})
+    return jsonify({"message": "DocMind demo loaded! Ask me about pricing, services, or how it works."})
+
+
+# ============================================================
+# DEMO 2 — Restaurant Demo (NEW)
+# Imagine a real restaurant called Spice Garden
+# A restaurant owner will see this and think "this is for ME"
+# ============================================================
+@app.route('/load-restaurant-demo', methods=['POST'])
+def load_restaurant_demo():
+    global all_pdf_chunks, history
+
+    # Clear old data and history so fresh demo starts
+    all_pdf_chunks = {}
+    history = []
+
+    # This is fake restaurant data — like a menu document
+    # In real client work, the client sends their actual menu PDF
+    restaurant_text = """
+    Welcome to Spice Garden Restaurant. We are open every day from 11 AM to 11 PM.
+    We are located at 42 MG Road, Pune, Maharashtra. Phone number is 9876543210.
+    We accept cash, UPI, credit cards and debit cards.
+    Home delivery is available through Swiggy and Zomato.
+    Table reservations can be made by calling us or through our website.
+
+    Starters and Appetizers.
+    Paneer Tikka costs 180 rupees. It is vegetarian. Soft paneer cubes marinated in spices and grilled.
+    Chicken Tikka costs 220 rupees. It is non-vegetarian. Tender chicken pieces grilled in tandoor.
+    Veg Spring Rolls cost 150 rupees. Crispy rolls filled with mixed vegetables.
+    Chicken Wings cost 250 rupees. Spicy fried chicken wings served with dipping sauce.
+    Mushroom Crispy costs 160 rupees. It is vegetarian. Deep fried mushrooms with chilli sauce.
+    Hara Bhara Kabab costs 170 rupees. It is vegetarian. Spinach and peas kabab pan fried.
+
+    Main Course Vegetarian.
+    Butter Paneer Masala costs 280 rupees. Paneer in rich tomato and butter gravy.
+    Palak Paneer costs 260 rupees. Paneer cooked in fresh spinach gravy.
+    Dal Makhani costs 220 rupees. Black lentils slow cooked overnight in butter and cream.
+    Chole Bhature costs 180 rupees. Spiced chickpeas served with two fluffy bhature.
+    Veg Biryani costs 200 rupees. Fragrant basmati rice cooked with mixed vegetables and spices.
+    Paneer Biryani costs 240 rupees. Basmati rice cooked with paneer and aromatic spices.
+    Aloo Jeera costs 180 rupees. Simple potatoes cooked with cumin seeds.
+    Mix Veg costs 200 rupees. Seasonal vegetables cooked in onion tomato gravy.
+
+    Main Course Non Vegetarian.
+    Butter Chicken costs 320 rupees. Tender chicken in creamy tomato butter sauce. Our bestseller.
+    Chicken Biryani costs 280 rupees. Aromatic basmati rice cooked with spiced chicken.
+    Mutton Rogan Josh costs 380 rupees. Slow cooked mutton in Kashmiri spices.
+    Chicken Korma costs 300 rupees. Chicken in mild creamy yogurt and nut gravy.
+    Fish Curry costs 340 rupees. Fresh fish in coastal style spicy curry.
+    Egg Curry costs 220 rupees. Boiled eggs in spiced onion tomato gravy.
+
+    Breads.
+    Tandoori Roti costs 30 rupees. Whole wheat bread baked in tandoor.
+    Butter Naan costs 50 rupees. Soft leavened bread baked in tandoor with butter.
+    Garlic Naan costs 60 rupees. Naan topped with garlic and coriander.
+    Paratha costs 60 rupees. Flaky whole wheat bread cooked on tawa.
+    Puri costs 30 rupees per piece. Deep fried puffed bread.
+
+    Rice.
+    Steamed Basmati Rice costs 120 rupees. Plain steamed basmati rice.
+    Jeera Rice costs 140 rupees. Steamed rice tempered with cumin seeds.
+
+    Desserts.
+    Gulab Jamun costs 120 rupees. Two pieces. Soft milk dumplings in sugar syrup.
+    Kulfi costs 130 rupees. Traditional Indian ice cream in pista or mango flavor.
+    Rasgulla costs 110 rupees. Two pieces. Soft cheese balls in light sugar syrup.
+    Gajar Halwa costs 150 rupees. Carrot pudding cooked in ghee and milk with dry fruits.
+    Ice Cream costs 100 rupees. Two scoops. Available in vanilla, chocolate, and strawberry.
+
+    Beverages.
+    Sweet Lassi costs 80 rupees. Chilled yogurt based sweet drink.
+    Salted Lassi costs 80 rupees. Chilled yogurt drink with cumin and salt.
+    Mango Lassi costs 100 rupees. Yogurt blended with fresh mango pulp.
+    Masala Chai costs 50 rupees. Spiced Indian tea with ginger and cardamom.
+    Cold Coffee costs 120 rupees. Chilled blended coffee with milk.
+    Fresh Lime Soda costs 80 rupees. Available sweet, salted, or mixed.
+    Soft Drinks costs 60 rupees. Pepsi, 7UP, Mirinda available.
+    Mineral Water costs 30 rupees.
+
+    Combo Meals.
+    Family Pack A costs 999 rupees. Serves 4 people. Includes 2 main course, 4 naan, rice, dal, and 2 desserts.
+    Lunch Thali costs 220 rupees. Dal, sabzi, rice, 2 roti, salad, and dessert. Available 11 AM to 3 PM only.
+    Business Lunch costs 180 rupees. Quick meal for office goers. Ready in 15 minutes.
+
+    Allergy and dietary information.
+    All vegetarian items are marked green on the menu. We use separate utensils for veg and non veg cooking.
+    We do not use MSG in any of our dishes. All our food is prepared fresh daily.
+    Please inform our staff about any allergies before ordering.
+
+    Special services.
+    We offer catering for events, weddings, and corporate functions.
+    Minimum order for catering is 50 persons. Contact us 3 days in advance for catering bookings.
+    We offer a 10 percent discount for orders above 2000 rupees.
+    Senior citizens get 5 percent discount on all orders.
+    """
+
+    # Store this text as chunks — same as uploading a PDF
+    all_pdf_chunks["SpiceGarden_Menu.pdf"] = split_into_chunks(clean(restaurant_text), 300)
+
+    return jsonify({
+        "message": "🍽️ Spice Garden Restaurant demo loaded! Ask about menu items, prices, timings, or anything!"
+    })
+
+
+# ============================================================
+# DEMO 3 — Clinic Demo (NEW)
+# A fake clinic called CityHealth Clinic
+# A doctor or clinic owner will see this and want to buy
+# ============================================================
+@app.route('/load-clinic-demo', methods=['POST'])
+def load_clinic_demo():
+    global all_pdf_chunks, history
+
+    # Clear old data and start fresh
+    all_pdf_chunks = {}
+    history = []
+
+    # Fake clinic document — like their brochure or services PDF
+    clinic_text = """
+    Welcome to CityHealth Clinic. We are a multi-specialty clinic located at 15 FC Road, Pune.
+    Our phone number is 020-4567890 and mobile is 9988776655.
+    We are open Monday to Saturday from 9 AM to 8 PM. Sunday timing is 10 AM to 2 PM.
+    We accept cash, UPI, all insurance cards, and corporate health cards.
+    We have ambulance service available 24 hours. Call 108 for emergency.
+
+    Doctors and Specialties.
+    Dr. Priya Sharma is our General Physician. MBBS MD. Available Monday Wednesday Friday 10 AM to 1 PM.
+    Dr. Rajesh Patel is our Cardiologist. MBBS MD DM Cardiology. Available Tuesday Thursday 11 AM to 2 PM.
+    Dr. Meena Joshi is our Gynecologist. MBBS MS Gynecology. Available Monday to Friday 9 AM to 12 PM.
+    Dr. Suresh Kumar is our Orthopedic Surgeon. MBBS MS Orthopedics. Available Wednesday Saturday 10 AM to 1 PM.
+    Dr. Anita Desai is our Pediatrician for children. MBBS MD Pediatrics. Available Daily 10 AM to 12 PM.
+    Dr. Vijay Singh is our Dermatologist for skin. MBBS MD Dermatology. Available Tuesday Friday 3 PM to 6 PM.
+    Dr. Ritu Agarwal is our Eye Specialist. MBBS MS Ophthalmology. Available Monday Thursday 11 AM to 2 PM.
+    Dr. Arun Mehta is our Dentist. BDS MDS. Available Monday to Saturday 10 AM to 7 PM.
+
+    Services and Treatments.
+    General consultation fee is 300 rupees. Specialist consultation fee is 500 rupees.
+    Follow-up consultation within 7 days is free of charge.
+    We provide complete annual health checkup packages.
+
+    Diagnostic Services.
+    Blood tests are available. Basic CBC blood test costs 200 rupees. Reports in 4 hours.
+    Complete blood count and sugar and thyroid package costs 800 rupees.
+    Urine test costs 150 rupees. Reports in 2 hours.
+    X-Ray is available for chest, hand, leg and spine. Chest X-ray costs 400 rupees.
+    ECG for heart test costs 300 rupees. Report given immediately.
+    Ultrasound costs 600 rupees. Abdominal and obstetric ultrasound available.
+    Echocardiography costs 1200 rupees. Done by cardiologist only.
+
+    Dental Services.
+    Dental cleaning costs 500 rupees.
+    Tooth filling costs 800 rupees per tooth.
+    Root canal treatment costs 3500 rupees per tooth.
+    Tooth extraction costs 600 rupees. Wisdom tooth extraction costs 1500 rupees.
+    Dental crown costs 4000 rupees per tooth.
+    Braces consultation is free. Braces treatment starts from 25000 rupees.
+    Teeth whitening costs 3000 rupees.
+
+    Eye Care Services.
+    Eye checkup and vision test costs 300 rupees.
+    Spectacle prescription is given after eye test.
+    Cataract surgery consultation is free.
+    Contact lens fitting and consultation costs 400 rupees.
+
+    Physiotherapy.
+    Physiotherapy sessions are available. First session costs 500 rupees.
+    Package of 10 sessions costs 4000 rupees.
+    Back pain, neck pain, knee pain treatment available.
+    Sports injury rehabilitation also available.
+
+    Vaccinations.
+    We provide all standard vaccinations for children and adults.
+    COVID booster, flu vaccine, typhoid vaccine, hepatitis vaccine available.
+    Travel vaccination package available for international travelers.
+
+    Health Packages.
+    Basic Health Package costs 1500 rupees. Includes blood test, urine test, ECG, and general consultation.
+    Comprehensive Health Package costs 3500 rupees. Includes all basic tests plus ultrasound, chest X-ray, and specialist consultation.
+    Senior Citizen Package costs 2500 rupees. Complete checkup for age 60 and above with diet counseling.
+    Women Health Package costs 2000 rupees. Includes gynecology consultation, blood tests, and bone density check.
+    Corporate Health Package available for companies. Minimum 20 employees. Contact us for pricing.
+
+    Appointments and Booking.
+    You can book appointment by calling 9988776655.
+    Online booking available on our website cityhealth.in.
+    WhatsApp booking available on same number 9988776655.
+    Walk-in patients accepted but appointment patients are given priority.
+    Waiting time for appointment is usually 10 to 15 minutes.
+    Waiting time for walk-in patients is 30 to 45 minutes.
+
+    Insurance and Payments.
+    We accept Star Health, New India, HDFC Ergo, Bajaj Allianz, and all major insurance.
+    Cashless treatment available for networked insurance.
+    For reimbursement, we provide all documents and bills.
+    EMI facility available for treatments above 10000 rupees.
+
+    Home Services.
+    Doctor home visit available for senior citizens and bedridden patients. Fee is 800 rupees.
+    Home blood sample collection available. Fee is 200 rupees plus test charges.
+    Nursing care at home also available. Contact us for details.
+
+    Emergency Services.
+    24 hour emergency helpline is 9988776655.
+    First aid and emergency care available during clinic hours.
+    We have tie-up with City Hospital for major emergency referrals.
+    Ambulance service can be arranged. Call 108 for free ambulance.
+    """
+
+    # Store clinic text as chunks
+    all_pdf_chunks["CityHealth_Clinic.pdf"] = split_into_chunks(clean(clinic_text), 300)
+
+    return jsonify({
+        "message": "🏥 CityHealth Clinic demo loaded! Ask about doctors, services, prices, or timings!"
+    })
+
 
 @app.route('/')
 def home():
@@ -160,8 +373,25 @@ header{padding:14px 20px 12px;background:rgba(7,8,15,0.9);backdrop-filter:blur(2
 .upload-icon{font-size:18px;}
 .upload-text strong{display:block;font-size:12px;font-weight:600;}
 .upload-text span{font-size:10px;color:var(--muted);}
-.demo-btn{padding:10px 14px;background:linear-gradient(135deg,rgba(94,234,212,0.15),rgba(124,92,252,0.15));border:1.5px solid rgba(94,234,212,0.3);border-radius:12px;color:var(--accent2);font-size:11px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;white-space:nowrap;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
-.demo-btn:hover{background:rgba(94,234,212,0.2);transform:translateY(-1px);}
+
+/* NEW — demo buttons row, 3 buttons side by side */
+.demo-row{display:flex;gap:6px;margin-top:8px;}
+
+/* Each demo button style */
+.demo-btn{flex:1;padding:8px 6px;border-radius:12px;font-size:10px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1.5px solid;}
+
+/* DocMind demo button — purple/teal color */
+.demo-btn.docmind{background:linear-gradient(135deg,rgba(94,234,212,0.15),rgba(124,92,252,0.15));border-color:rgba(94,234,212,0.3);color:var(--accent2);}
+.demo-btn.docmind:hover{background:rgba(94,234,212,0.2);transform:translateY(-1px);}
+
+/* Restaurant demo button — orange/warm color */
+.demo-btn.restaurant{background:linear-gradient(135deg,rgba(251,146,60,0.15),rgba(239,68,68,0.1));border-color:rgba(251,146,60,0.4);color:#fb923c;}
+.demo-btn.restaurant:hover{background:rgba(251,146,60,0.2);transform:translateY(-1px);}
+
+/* Clinic demo button — green/health color */
+.demo-btn.clinic{background:linear-gradient(135deg,rgba(34,197,94,0.15),rgba(16,185,129,0.1));border-color:rgba(34,197,94,0.4);color:#22c55e;}
+.demo-btn.clinic:hover{background:rgba(34,197,94,0.2);transform:translateY(-1px);}
+
 .demo-btn span{font-size:16px;}
 .pdf-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px;}
 .chip{display:flex;align-items:center;gap:4px;padding:3px 10px;background:rgba(124,92,252,0.12);border:1px solid rgba(124,92,252,0.25);border-radius:20px;font-size:11px;color:#a78bfa;animation:chip-in 0.3s ease;}
@@ -244,8 +474,21 @@ header{padding:14px 20px 12px;background:rgba(7,8,15,0.9);backdrop-filter:blur(2
           <span>PDF files · Multiple allowed · Instant AI processing</span>
         </div>
       </div>
-      <button class="demo-btn" onclick="loadDemo()"><span>⚡</span>Try Demo</button>
     </div>
+
+    <!-- NEW: 3 demo buttons side by side -->
+    <div class="demo-row">
+      <button class="demo-btn docmind" onclick="loadDemo('docmind')">
+        <span>🧠</span>DocMind
+      </button>
+      <button class="demo-btn restaurant" onclick="loadDemo('restaurant')">
+        <span>🍽️</span>Restaurant
+      </button>
+      <button class="demo-btn clinic" onclick="loadDemo('clinic')">
+        <span>🏥</span>Clinic
+      </button>
+    </div>
+
     <div class="pdf-chips" id="pdf-chips"></div>
     <div class="stats-bar">
       <div class="stat"><div class="stat-num">TF-IDF</div><div class="stat-label">Smart Search</div></div>
@@ -257,14 +500,14 @@ header{padding:14px 20px 12px;background:rgba(7,8,15,0.9);backdrop-filter:blur(2
   <div class="chat" id="chat">
     <div class="msg ai">
       <div class="msg-header"><div class="avatar ai-av">AI</div><span class="sender-name">DocMind AI</span></div>
-      <div class="bubble">👋 Welcome! Upload any business document and I will answer questions from it instantly.<br><br>⚡ Want to see it live right now? Hit <strong>Try Demo</strong> — no upload needed!</div>
+      <div class="bubble">👋 Welcome! Upload any business document and I will answer questions from it instantly.<br><br>⚡ Try a live demo — <strong>🧠 DocMind</strong> for AI services, <strong>🍽️ Restaurant</strong> for a menu demo, or <strong>🏥 Clinic</strong> for a medical demo!</div>
     </div>
   </div>
   <div class="typing-msg" id="typing">
     <div class="typing-header"><div class="avatar ai-av">AI</div><span class="sender-name">DocMind AI</span></div>
     <div class="typing-bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
   </div>
-  <div class="suggestions" id="sugs">
+  <div class="suggestions" id="sugs" style="display:none">
     <button class="sug" onclick="ask(this)">💰 What are your prices?</button>
     <button class="sug" onclick="ask(this)">⚡ How does it work?</button>
     <button class="sug" onclick="ask(this)">🏢 Which industries?</button>
@@ -292,14 +535,75 @@ document.getElementById('pdffile').onchange=function(){
     document.getElementById('sugs').style.display='none';
   });
 };
-function loadDemo(){
-  fetch('/load-demo',{method:'POST'}).then(r=>r.json()).then(d=>{
-    document.getElementById('pdf-chips').innerHTML='<div class="chip">&#9889; DocMind_Demo.pdf</div>';
-    addMessage('ai','&#9889; '+d.message,null);
-    document.getElementById('sugs').style.display='flex';
+
+// This function now handles all 3 demo types
+// type = 'docmind' or 'restaurant' or 'clinic'
+function loadDemo(type) {
+  // Pick the right URL based on which button was clicked
+  var url = '/load-demo';
+  var chipLabel = '⚡ DocMind_Demo.pdf';
+  var suggestions = [
+    '💰 What are your prices?',
+    '⚡ How does it work?',
+    '🏢 Which industries?',
+    '📦 What is included?'
+  ];
+
+  // If restaurant button clicked, use restaurant URL
+  if (type === 'restaurant') {
+    url = '/load-restaurant-demo';
+    chipLabel = '🍽️ SpiceGarden_Menu.pdf';
+    suggestions = [
+      '🍗 Do you have butter chicken?',
+      '🕐 What are your timings?',
+      '💰 How much is paneer tikka?',
+      '🥗 Show me vegetarian options'
+    ];
+  }
+
+  // If clinic button clicked, use clinic URL
+  if (type === 'clinic') {
+    url = '/load-clinic-demo';
+    chipLabel = '🏥 CityHealth_Clinic.pdf';
+    suggestions = [
+      '🩺 Which doctors are available?',
+      '💰 What is consultation fee?',
+      '🦷 Do you have dental services?',
+      '🕐 What are clinic timings?'
+    ];
+  }
+
+  // Call the backend route
+  fetch(url, {method:'POST'}).then(r=>r.json()).then(d=>{
+    // Show which file is loaded
+    document.getElementById('pdf-chips').innerHTML =
+      '<div class="chip">' + chipLabel + '</div>';
+
+    // Show the welcome message
+    addMessage('ai', d.message, null);
+
+    // Show relevant suggestion buttons
+    var sugsDiv = document.getElementById('sugs');
+    sugsDiv.innerHTML = '';
+    suggestions.forEach(function(s) {
+      var btn = document.createElement('button');
+      btn.className = 'sug';
+      btn.textContent = s;
+      btn.onclick = function(){ ask(this); };
+      sugsDiv.appendChild(btn);
+    });
+    sugsDiv.style.display = 'flex';
   });
 }
-function ask(btn){document.getElementById('msg').value=btn.textContent.slice(2).trim();send();}
+
+function ask(btn){
+  // Remove emoji from start when sending as question
+  var text = btn.textContent.trim();
+  // Remove first 2 chars if they are emoji + space
+  document.getElementById('msg').value = text.slice(2).trim();
+  send();
+}
+
 function send(){
   var msg=document.getElementById('msg').value.trim();
   if(!msg)return;
@@ -315,6 +619,7 @@ function send(){
     document.getElementById('send-btn').disabled=false;
   });
 }
+
 function addMessage(role,text,source){
   var chat=document.getElementById('chat');
   var div=document.createElement('div');
@@ -363,7 +668,7 @@ def chat():
         data = request.json
         msg = data.get('message', '')
         if not all_pdf_chunks:
-            return jsonify({"reply": "Please upload a PDF or click Try Demo first!", "source": ""})
+            return jsonify({"reply": "Please upload a PDF or click a demo button first!", "source": ""})
         best_chunk, source_pdf = find_best_chunk(msg, all_pdf_chunks)
         system = f"""You are DocMind AI, a helpful assistant built by Piyush Sambhwani.
 Answer questions based ONLY on this content:
